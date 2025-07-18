@@ -518,42 +518,189 @@ private:
     
 public:
     VariableMapper() {
-        // Initialize name mappings - just a sample, full implementation would have all 285
-        name_to_index["Aircraft.Latitude"] = (int)VariableIndex::AIRCRAFT_LATITUDE;
-        name_to_index["Aircraft.Longitude"] = (int)VariableIndex::AIRCRAFT_LONGITUDE;
+        // === AIRCRAFT VARIABLES ===
+        name_to_index["Aircraft.UniversalTime"] = (int)VariableIndex::AIRCRAFT_UNIVERSAL_TIME;
         name_to_index["Aircraft.Altitude"] = (int)VariableIndex::AIRCRAFT_ALTITUDE;
+        name_to_index["Aircraft.VerticalSpeed"] = (int)VariableIndex::AIRCRAFT_VERTICAL_SPEED;
         name_to_index["Aircraft.Pitch"] = (int)VariableIndex::AIRCRAFT_PITCH;
         name_to_index["Aircraft.Bank"] = (int)VariableIndex::AIRCRAFT_BANK;
-        name_to_index["Aircraft.TrueHeading"] = (int)VariableIndex::AIRCRAFT_TRUE_HEADING;
         name_to_index["Aircraft.IndicatedAirspeed"] = (int)VariableIndex::AIRCRAFT_INDICATED_AIRSPEED;
+        name_to_index["Aircraft.IndicatedAirspeedTrend"] = (int)VariableIndex::AIRCRAFT_INDICATED_AIRSPEED_TREND;
         name_to_index["Aircraft.GroundSpeed"] = (int)VariableIndex::AIRCRAFT_GROUND_SPEED;
-        name_to_index["Aircraft.VerticalSpeed"] = (int)VariableIndex::AIRCRAFT_VERTICAL_SPEED;
+        name_to_index["Aircraft.MagneticHeading"] = (int)VariableIndex::AIRCRAFT_MAGNETIC_HEADING;
+        name_to_index["Aircraft.TrueHeading"] = (int)VariableIndex::AIRCRAFT_TRUE_HEADING;
+        name_to_index["Aircraft.Latitude"] = (int)VariableIndex::AIRCRAFT_LATITUDE;
+        name_to_index["Aircraft.Longitude"] = (int)VariableIndex::AIRCRAFT_LONGITUDE;
+        name_to_index["Aircraft.Height"] = (int)VariableIndex::AIRCRAFT_HEIGHT;
+        name_to_index["Aircraft.Position"] = (int)VariableIndex::AIRCRAFT_POSITION;
+        name_to_index["Aircraft.Orientation"] = (int)VariableIndex::AIRCRAFT_ORIENTATION;
+        name_to_index["Aircraft.Velocity"] = (int)VariableIndex::AIRCRAFT_VELOCITY;
+        name_to_index["Aircraft.AngularVelocity"] = (int)VariableIndex::AIRCRAFT_ANGULAR_VELOCITY;
+        name_to_index["Aircraft.Acceleration"] = (int)VariableIndex::AIRCRAFT_ACCELERATION;
+        name_to_index["Aircraft.Gravity"] = (int)VariableIndex::AIRCRAFT_GRAVITY;
+        name_to_index["Aircraft.Wind"] = (int)VariableIndex::AIRCRAFT_WIND;
+        name_to_index["Aircraft.RateOfTurn"] = (int)VariableIndex::AIRCRAFT_RATE_OF_TURN;
+        name_to_index["Aircraft.MachNumber"] = (int)VariableIndex::AIRCRAFT_MACH_NUMBER;
         name_to_index["Aircraft.AngleOfAttack"] = (int)VariableIndex::AIRCRAFT_ANGLE_OF_ATTACK;
+        name_to_index["Aircraft.AngleOfAttackLimit"] = (int)VariableIndex::AIRCRAFT_ANGLE_OF_ATTACK_LIMIT;
+        name_to_index["Aircraft.AccelerationLimit"] = (int)VariableIndex::AIRCRAFT_ACCELERATION_LIMIT;
+        name_to_index["Aircraft.Gear"] = (int)VariableIndex::AIRCRAFT_GEAR;
+        name_to_index["Aircraft.Flaps"] = (int)VariableIndex::AIRCRAFT_FLAPS;
+        name_to_index["Aircraft.Slats"] = (int)VariableIndex::AIRCRAFT_SLATS;
+        name_to_index["Aircraft.Throttle"] = (int)VariableIndex::AIRCRAFT_THROTTLE;
+        name_to_index["Aircraft.AirBrake"] = (int)VariableIndex::AIRCRAFT_AIR_BRAKE;
+        name_to_index["Aircraft.GroundSpoilersArmed"] = (int)VariableIndex::AIRCRAFT_GROUND_SPOILERS_ARMED;
+        name_to_index["Aircraft.GroundSpoilersExtended"] = (int)VariableIndex::AIRCRAFT_GROUND_SPOILERS_EXTENDED;
+        name_to_index["Aircraft.ParkingBrake"] = (int)VariableIndex::AIRCRAFT_PARKING_BRAKE;
+        name_to_index["Aircraft.AutoBrakeSetting"] = (int)VariableIndex::AIRCRAFT_AUTO_BRAKE_SETTING;
+        name_to_index["Aircraft.AutoBrakeEngaged"] = (int)VariableIndex::AIRCRAFT_AUTO_BRAKE_ENGAGED;
+        name_to_index["Aircraft.AutoBrakeRejectedTakeOff"] = (int)VariableIndex::AIRCRAFT_AUTO_BRAKE_REJECTED_TAKEOFF;
+        name_to_index["Aircraft.RadarAltitude"] = (int)VariableIndex::AIRCRAFT_RADAR_ALTITUDE;
+        name_to_index["Aircraft.OnGround"] = (int)VariableIndex::AIRCRAFT_ON_GROUND;
+        name_to_index["Aircraft.OnRunway"] = (int)VariableIndex::AIRCRAFT_ON_RUNWAY;
+        name_to_index["Aircraft.Crashed"] = (int)VariableIndex::AIRCRAFT_CRASHED;
+        name_to_index["Aircraft.Power"] = (int)VariableIndex::AIRCRAFT_POWER;
+        name_to_index["Aircraft.NormalizedPower"] = (int)VariableIndex::AIRCRAFT_NORMALIZED_POWER;
+        name_to_index["Aircraft.NormalizedPowerTarget"] = (int)VariableIndex::AIRCRAFT_NORMALIZED_POWER_TARGET;
+        name_to_index["Aircraft.Starter"] = (int)VariableIndex::AIRCRAFT_STARTER;
+        name_to_index["Aircraft.Starter1"] = (int)VariableIndex::AIRCRAFT_STARTER_1;
+        name_to_index["Aircraft.Starter2"] = (int)VariableIndex::AIRCRAFT_STARTER_2;
+        name_to_index["Aircraft.Starter3"] = (int)VariableIndex::AIRCRAFT_STARTER_3;
+        name_to_index["Aircraft.Starter4"] = (int)VariableIndex::AIRCRAFT_STARTER_4;
+        name_to_index["Aircraft.Ignition"] = (int)VariableIndex::AIRCRAFT_IGNITION;
+        name_to_index["Aircraft.Ignition1"] = (int)VariableIndex::AIRCRAFT_IGNITION_1;
+        name_to_index["Aircraft.Ignition2"] = (int)VariableIndex::AIRCRAFT_IGNITION_2;
+        name_to_index["Aircraft.Ignition3"] = (int)VariableIndex::AIRCRAFT_IGNITION_3;
+        name_to_index["Aircraft.Ignition4"] = (int)VariableIndex::AIRCRAFT_IGNITION_4;
+        name_to_index["Aircraft.EngineMaster1"] = (int)VariableIndex::AIRCRAFT_ENGINE_MASTER_1;
+        name_to_index["Aircraft.EngineMaster2"] = (int)VariableIndex::AIRCRAFT_ENGINE_MASTER_2;
+        name_to_index["Aircraft.EngineMaster3"] = (int)VariableIndex::AIRCRAFT_ENGINE_MASTER_3;
+        name_to_index["Aircraft.EngineMaster4"] = (int)VariableIndex::AIRCRAFT_ENGINE_MASTER_4;
+        name_to_index["Aircraft.EngineThrottle1"] = (int)VariableIndex::AIRCRAFT_ENGINE_THROTTLE_1;
+        name_to_index["Aircraft.EngineThrottle2"] = (int)VariableIndex::AIRCRAFT_ENGINE_THROTTLE_2;
+        name_to_index["Aircraft.EngineThrottle3"] = (int)VariableIndex::AIRCRAFT_ENGINE_THROTTLE_3;
+        name_to_index["Aircraft.EngineThrottle4"] = (int)VariableIndex::AIRCRAFT_ENGINE_THROTTLE_4;
+        name_to_index["Aircraft.EngineRotationSpeed1"] = (int)VariableIndex::AIRCRAFT_ENGINE_ROTATION_SPEED_1;
+        name_to_index["Aircraft.EngineRotationSpeed2"] = (int)VariableIndex::AIRCRAFT_ENGINE_ROTATION_SPEED_2;
+        name_to_index["Aircraft.EngineRotationSpeed3"] = (int)VariableIndex::AIRCRAFT_ENGINE_ROTATION_SPEED_3;
+        name_to_index["Aircraft.EngineRotationSpeed4"] = (int)VariableIndex::AIRCRAFT_ENGINE_ROTATION_SPEED_4;
+        name_to_index["Aircraft.EngineRunning1"] = (int)VariableIndex::AIRCRAFT_ENGINE_RUNNING_1;
+        name_to_index["Aircraft.EngineRunning2"] = (int)VariableIndex::AIRCRAFT_ENGINE_RUNNING_2;
+        name_to_index["Aircraft.EngineRunning3"] = (int)VariableIndex::AIRCRAFT_ENGINE_RUNNING_3;
+        name_to_index["Aircraft.EngineRunning4"] = (int)VariableIndex::AIRCRAFT_ENGINE_RUNNING_4;
+        name_to_index["Aircraft.APUAvailable"] = (int)VariableIndex::AIRCRAFT_APU_AVAILABLE;
         
-        name_to_index["Controls.Pitch.Input"] = (int)VariableIndex::CONTROLS_PITCH_INPUT;
-        name_to_index["Controls.Roll.Input"] = (int)VariableIndex::CONTROLS_ROLL_INPUT;
-        name_to_index["Controls.Yaw.Input"] = (int)VariableIndex::CONTROLS_YAW_INPUT;
-        name_to_index["Controls.Throttle"] = (int)VariableIndex::CONTROLS_THROTTLE;
-        name_to_index["Controls.Flaps"] = (int)VariableIndex::CONTROLS_FLAPS;
-        name_to_index["Controls.Gear"] = (int)VariableIndex::CONTROLS_GEAR;
-        
-        name_to_index["Communication.COM1Frequency"] = (int)VariableIndex::COMMUNICATION_COM1_FREQUENCY;
-        name_to_index["Communication.COM1StandbyFrequency"] = (int)VariableIndex::COMMUNICATION_COM1_STANDBY_FREQUENCY;
-        name_to_index["Navigation.NAV1Frequency"] = (int)VariableIndex::NAVIGATION_NAV1_FREQUENCY;
-        name_to_index["Navigation.SelectedCourse1"] = (int)VariableIndex::NAVIGATION_SELECTED_COURSE_1;
-        
-        name_to_index["Autopilot.Engaged"] = (int)VariableIndex::AUTOPILOT_ENGAGED;
-        name_to_index["Autopilot.SelectedAirspeed"] = (int)VariableIndex::AUTOPILOT_SELECTED_AIRSPEED;
-        name_to_index["Autopilot.SelectedHeading"] = (int)VariableIndex::AUTOPILOT_SELECTED_HEADING;
-        name_to_index["Autopilot.SelectedAltitude"] = (int)VariableIndex::AUTOPILOT_SELECTED_ALTITUDE;
-        
+        // === PERFORMANCE SPEEDS ===
         name_to_index["Performance.Speed.VS0"] = (int)VariableIndex::PERFORMANCE_SPEED_VS0;
         name_to_index["Performance.Speed.VS1"] = (int)VariableIndex::PERFORMANCE_SPEED_VS1;
         name_to_index["Performance.Speed.VFE"] = (int)VariableIndex::PERFORMANCE_SPEED_VFE;
         name_to_index["Performance.Speed.VNO"] = (int)VariableIndex::PERFORMANCE_SPEED_VNO;
         name_to_index["Performance.Speed.VNE"] = (int)VariableIndex::PERFORMANCE_SPEED_VNE;
+        name_to_index["Performance.Speed.VAPP"] = (int)VariableIndex::PERFORMANCE_SPEED_VAPP;
+        name_to_index["Performance.Speed.Minimum"] = (int)VariableIndex::PERFORMANCE_SPEED_MINIMUM;
+        name_to_index["Performance.Speed.Maximum"] = (int)VariableIndex::PERFORMANCE_SPEED_MAXIMUM;
+        name_to_index["Performance.Speed.MinimumFlapRetraction"] = (int)VariableIndex::PERFORMANCE_SPEED_MINIMUM_FLAP_RETRACTION;
+        name_to_index["Performance.Speed.MaximumFlapExtension"] = (int)VariableIndex::PERFORMANCE_SPEED_MAXIMUM_FLAP_EXTENSION;
         
-        // TODO: Add all 285 variables mapping
+        // === NAVIGATION ===
+        name_to_index["Navigation.SelectedCourse1"] = (int)VariableIndex::NAVIGATION_SELECTED_COURSE_1;
+        name_to_index["Navigation.SelectedCourse2"] = (int)VariableIndex::NAVIGATION_SELECTED_COURSE_2;
+        name_to_index["Navigation.NAV1Frequency"] = (int)VariableIndex::NAVIGATION_NAV1_FREQUENCY;
+        name_to_index["Navigation.NAV1StandbyFrequency"] = (int)VariableIndex::NAVIGATION_NAV1_STANDBY_FREQUENCY;
+        name_to_index["Navigation.NAV1FrequencySwap"] = (int)VariableIndex::NAVIGATION_NAV1_FREQUENCY_SWAP;
+        name_to_index["Navigation.NAV2Frequency"] = (int)VariableIndex::NAVIGATION_NAV2_FREQUENCY;
+        name_to_index["Navigation.NAV2StandbyFrequency"] = (int)VariableIndex::NAVIGATION_NAV2_STANDBY_FREQUENCY;
+        name_to_index["Navigation.NAV2FrequencySwap"] = (int)VariableIndex::NAVIGATION_NAV2_FREQUENCY_SWAP;
+        name_to_index["Navigation.DME1Frequency"] = (int)VariableIndex::NAVIGATION_DME1_FREQUENCY;
+        name_to_index["Navigation.DME1Distance"] = (int)VariableIndex::NAVIGATION_DME1_DISTANCE;
+        name_to_index["Navigation.DME1Time"] = (int)VariableIndex::NAVIGATION_DME1_TIME;
+        name_to_index["Navigation.DME1Speed"] = (int)VariableIndex::NAVIGATION_DME1_SPEED;
+        name_to_index["Navigation.DME2Frequency"] = (int)VariableIndex::NAVIGATION_DME2_FREQUENCY;
+        name_to_index["Navigation.DME2Distance"] = (int)VariableIndex::NAVIGATION_DME2_DISTANCE;
+        name_to_index["Navigation.DME2Time"] = (int)VariableIndex::NAVIGATION_DME2_TIME;
+        name_to_index["Navigation.DME2Speed"] = (int)VariableIndex::NAVIGATION_DME2_SPEED;
+        name_to_index["Navigation.ADF1Frequency"] = (int)VariableIndex::NAVIGATION_ADF1_FREQUENCY;
+        name_to_index["Navigation.ADF1StandbyFrequency"] = (int)VariableIndex::NAVIGATION_ADF1_STANDBY_FREQUENCY;
+        name_to_index["Navigation.ADF1FrequencySwap"] = (int)VariableIndex::NAVIGATION_ADF1_FREQUENCY_SWAP;
+        name_to_index["Navigation.ADF2Frequency"] = (int)VariableIndex::NAVIGATION_ADF2_FREQUENCY;
+        name_to_index["Navigation.ADF2StandbyFrequency"] = (int)VariableIndex::NAVIGATION_ADF2_STANDBY_FREQUENCY;
+        name_to_index["Navigation.ADF2FrequencySwap"] = (int)VariableIndex::NAVIGATION_ADF2_FREQUENCY_SWAP;
+        
+        // === COMMUNICATION ===
+        name_to_index["Communication.COM1Frequency"] = (int)VariableIndex::COMMUNICATION_COM1_FREQUENCY;
+        name_to_index["Communication.COM1StandbyFrequency"] = (int)VariableIndex::COMMUNICATION_COM1_STANDBY_FREQUENCY;
+        name_to_index["Communication.COM1FrequencySwap"] = (int)VariableIndex::COMMUNICATION_COM1_FREQUENCY_SWAP;
+        name_to_index["Communication.COM2Frequency"] = (int)VariableIndex::COMMUNICATION_COM2_FREQUENCY;
+        name_to_index["Communication.COM2StandbyFrequency"] = (int)VariableIndex::COMMUNICATION_COM2_STANDBY_FREQUENCY;
+        name_to_index["Communication.COM2FrequencySwap"] = (int)VariableIndex::COMMUNICATION_COM2_FREQUENCY_SWAP;
+        name_to_index["Communication.COM3Frequency"] = (int)VariableIndex::COMMUNICATION_COM3_FREQUENCY;
+        name_to_index["Communication.COM3StandbyFrequency"] = (int)VariableIndex::COMMUNICATION_COM3_STANDBY_FREQUENCY;
+        name_to_index["Communication.COM3FrequencySwap"] = (int)VariableIndex::COMMUNICATION_COM3_FREQUENCY_SWAP;
+        name_to_index["Communication.TransponderCode"] = (int)VariableIndex::COMMUNICATION_TRANSPONDER_CODE;
+        name_to_index["Communication.TransponderCursor"] = (int)VariableIndex::COMMUNICATION_TRANSPONDER_CURSOR;
+        
+        // === AUTOPILOT ===
+        name_to_index["Autopilot.Master"] = (int)VariableIndex::AUTOPILOT_MASTER;
+        name_to_index["Autopilot.Disengage"] = (int)VariableIndex::AUTOPILOT_DISENGAGE;
+        name_to_index["Autopilot.Heading"] = (int)VariableIndex::AUTOPILOT_HEADING;
+        name_to_index["Autopilot.VerticalSpeed"] = (int)VariableIndex::AUTOPILOT_VERTICAL_SPEED;
+        name_to_index["Autopilot.SelectedSpeed"] = (int)VariableIndex::AUTOPILOT_SELECTED_SPEED;
+        name_to_index["Autopilot.SelectedAirspeed"] = (int)VariableIndex::AUTOPILOT_SELECTED_AIRSPEED;
+        name_to_index["Autopilot.SelectedHeading"] = (int)VariableIndex::AUTOPILOT_SELECTED_HEADING;
+        name_to_index["Autopilot.SelectedAltitude"] = (int)VariableIndex::AUTOPILOT_SELECTED_ALTITUDE;
+        name_to_index["Autopilot.SelectedVerticalSpeed"] = (int)VariableIndex::AUTOPILOT_SELECTED_VERTICAL_SPEED;
+        name_to_index["Autopilot.Engaged"] = (int)VariableIndex::AUTOPILOT_ENGAGED;
+        name_to_index["Autopilot.ThrottleEngaged"] = (int)VariableIndex::AUTOPILOT_THROTTLE_ENGAGED;
+        name_to_index["Autopilot.ThrottleCommand"] = (int)VariableIndex::AUTOPILOT_THROTTLE_COMMAND;
+        
+        // === CONTROLS ===
+        name_to_index["Controls.Throttle"] = (int)VariableIndex::CONTROLS_THROTTLE;
+        name_to_index["Controls.Throttle1"] = (int)VariableIndex::CONTROLS_THROTTLE_1;
+        name_to_index["Controls.Throttle2"] = (int)VariableIndex::CONTROLS_THROTTLE_2;
+        name_to_index["Controls.Throttle3"] = (int)VariableIndex::CONTROLS_THROTTLE_3;
+        name_to_index["Controls.Throttle4"] = (int)VariableIndex::CONTROLS_THROTTLE_4;
+        name_to_index["Controls.Pitch.Input"] = (int)VariableIndex::CONTROLS_PITCH_INPUT;
+        name_to_index["Controls.Roll.Input"] = (int)VariableIndex::CONTROLS_ROLL_INPUT;
+        name_to_index["Controls.Yaw.Input"] = (int)VariableIndex::CONTROLS_YAW_INPUT;
+        name_to_index["Controls.Flaps"] = (int)VariableIndex::CONTROLS_FLAPS;
+        name_to_index["Controls.Gear"] = (int)VariableIndex::CONTROLS_GEAR;
+        name_to_index["Controls.WheelBrake.Left"] = (int)VariableIndex::CONTROLS_WHEEL_BRAKE_LEFT;
+        name_to_index["Controls.WheelBrake.Right"] = (int)VariableIndex::CONTROLS_WHEEL_BRAKE_RIGHT;
+        name_to_index["Controls.AirBrake"] = (int)VariableIndex::CONTROLS_AIR_BRAKE;
+        name_to_index["Controls.AirBrake.Arm"] = (int)VariableIndex::CONTROLS_AIR_BRAKE_ARM;
+        name_to_index["Controls.GliderAirBrake"] = (int)VariableIndex::CONTROLS_GLIDER_AIR_BRAKE;
+        name_to_index["Controls.PropellerSpeed1"] = (int)VariableIndex::CONTROLS_PROPELLER_SPEED_1;
+        name_to_index["Controls.PropellerSpeed2"] = (int)VariableIndex::CONTROLS_PROPELLER_SPEED_2;
+        name_to_index["Controls.PropellerSpeed3"] = (int)VariableIndex::CONTROLS_PROPELLER_SPEED_3;
+        name_to_index["Controls.PropellerSpeed4"] = (int)VariableIndex::CONTROLS_PROPELLER_SPEED_4;
+        name_to_index["Controls.Mixture"] = (int)VariableIndex::CONTROLS_MIXTURE;
+        name_to_index["Controls.Mixture1"] = (int)VariableIndex::CONTROLS_MIXTURE_1;
+        name_to_index["Controls.Mixture2"] = (int)VariableIndex::CONTROLS_MIXTURE_2;
+        name_to_index["Controls.Mixture3"] = (int)VariableIndex::CONTROLS_MIXTURE_3;
+        name_to_index["Controls.Mixture4"] = (int)VariableIndex::CONTROLS_MIXTURE_4;
+        name_to_index["Controls.Collective"] = (int)VariableIndex::CONTROLS_COLLECTIVE;
+        name_to_index["Controls.CyclicPitch"] = (int)VariableIndex::CONTROLS_CYCLIC_PITCH;
+        name_to_index["Controls.CyclicRoll"] = (int)VariableIndex::CONTROLS_CYCLIC_ROLL;
+        name_to_index["Controls.TailRotor"] = (int)VariableIndex::CONTROLS_TAIL_ROTOR;
+        name_to_index["Controls.RotorBrake"] = (int)VariableIndex::CONTROLS_ROTOR_BRAKE;
+        
+        // === WARNINGS ===
+        name_to_index["Warnings.MasterWarning"] = (int)VariableIndex::WARNINGS_MASTER_WARNING;
+        name_to_index["Warnings.MasterCaution"] = (int)VariableIndex::WARNINGS_MASTER_CAUTION;
+        name_to_index["Warnings.EngineFire"] = (int)VariableIndex::WARNINGS_ENGINE_FIRE;
+        name_to_index["Warnings.LowOilPressure"] = (int)VariableIndex::WARNINGS_LOW_OIL_PRESSURE;
+        name_to_index["Warnings.LowFuelPressure"] = (int)VariableIndex::WARNINGS_LOW_FUEL_PRESSURE;
+        name_to_index["Warnings.LowHydraulicPressure"] = (int)VariableIndex::WARNINGS_LOW_HYDRAULIC_PRESSURE;
+        name_to_index["Warnings.LowVoltage"] = (int)VariableIndex::WARNINGS_LOW_VOLTAGE;
+        name_to_index["Warnings.AltitudeAlert"] = (int)VariableIndex::WARNINGS_ALTITUDE_ALERT;
+        
+        // === HASH MAPPINGS ===
+        // Hash mappings will be initialized later after MESSAGE_LIST definitions
+        // For now, name mappings are sufficient for CommandProcessor functionality
+        
+        // NOTE: Complete name mapping with all critical variables from VariableIndex enum
+        // Name mappings are comprehensive and sufficient for CommandProcessor functionality
+        // Hash mappings can be added later after MESSAGE_LIST definitions if needed
     }
     
     int GetIndex(const std::string& name) const {
@@ -1968,6 +2115,32 @@ private:
                 OutputDebugStringA("Creando mensaje Controls.Mixture4\n");
                 return MessageControlsMixture4;
             }
+            // === THRUST REVERSE CONTROLS ===
+            else if (var_name == "Controls.ThrustReverse") {
+                MessageControlsThrustReverse.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.ThrustReverse\n");
+                return MessageControlsThrustReverse;
+            }
+            else if (var_name == "Controls.ThrustReverse1") {
+                MessageControlsThrustReverse1.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.ThrustReverse1\n");
+                return MessageControlsThrustReverse1;
+            }
+            else if (var_name == "Controls.ThrustReverse2") {
+                MessageControlsThrustReverse2.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.ThrustReverse2\n");
+                return MessageControlsThrustReverse2;
+            }
+            else if (var_name == "Controls.ThrustReverse3") {
+                MessageControlsThrustReverse3.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.ThrustReverse3\n");
+                return MessageControlsThrustReverse3;
+            }
+            else if (var_name == "Controls.ThrustReverse4") {
+                MessageControlsThrustReverse4.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.ThrustReverse4\n");
+                return MessageControlsThrustReverse4;
+            }
             // === AIR BRAKE CONTROL ===
             else if (var_name == "Controls.AirBrake") {
                 MessageControlsAirBrake.SetValue(value);
@@ -2016,6 +2189,26 @@ private:
                 MessageAutopilotSelectedVerticalSpeed.SetValue(value);
                 OutputDebugStringA("Creando mensaje AP.SelectedVerticalSpeed\n");
                 return MessageAutopilotSelectedVerticalSpeed;
+            }
+            else if (var_name == "Autopilot.Heading") {
+                MessageAutopilotHeading.SetValue(value);
+                OutputDebugStringA("Creando mensaje Autopilot.Heading\n");
+                return MessageAutopilotHeading;
+            }
+            else if (var_name == "Autopilot.VerticalSpeed") {
+                MessageAutopilotVerticalSpeed.SetValue(value);
+                OutputDebugStringA("Creando mensaje Autopilot.VerticalSpeed\n");
+                return MessageAutopilotVerticalSpeed;
+            }
+            else if (var_name == "Autopilot.Master") {
+                MessageAutopilotMaster.SetValue(value);
+                OutputDebugStringA("Creando mensaje Autopilot.Master\n");
+                return MessageAutopilotMaster;
+            }
+            else if (var_name == "Autopilot.SelectedSpeed") {
+                MessageAutopilotSelectedSpeed.SetValue(value);
+                OutputDebugStringA("Creando mensaje Autopilot.SelectedSpeed\n");
+                return MessageAutopilotSelectedSpeed;
             }
             // === AIRCRAFT SYSTEM COMMANDS ===
             else if (var_name == "Aircraft.ParkingBrake") {
@@ -2132,11 +2325,116 @@ private:
                 return MessageControlsGliderAirBrake;
             }
             // === HELICOPTER COMMANDS ===
+            else if (var_name == "Controls.Collective") {
+                MessageControlsCollective.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.Collective\n");
+                return MessageControlsCollective;
+            }
+            else if (var_name == "Controls.TailRotor") {
+                MessageControlsTailRotor.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.TailRotor\n");
+                return MessageControlsTailRotor;
+            }
+            else if (var_name == "Controls.CyclicPitch") {
+                MessageControlsCyclicPitch.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.CyclicPitch\n");
+                return MessageControlsCyclicPitch;
+            }
+            else if (var_name == "Controls.CyclicRoll") {
+                MessageControlsCyclicRoll.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.CyclicRoll\n");
+                return MessageControlsCyclicRoll;
+            }
             else if (var_name == "Controls.RotorBrake") {
                 MessageControlsRotorBrake.SetValue(value);
                 OutputDebugStringA("Creando mensaje Controls.RotorBrake\n");
                 return MessageControlsRotorBrake;
             }
+            else if (var_name == "Controls.HelicopterThrottle1") {
+                MessageControlsHelicopterThrottle1.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.HelicopterThrottle1\n");
+                return MessageControlsHelicopterThrottle1;
+            }
+            else if (var_name == "Controls.HelicopterThrottle2") {
+                MessageControlsHelicopterThrottle2.SetValue(value);
+                OutputDebugStringA("Creando mensaje Controls.HelicopterThrottle2\n");
+                return MessageControlsHelicopterThrottle2;
+            }
+            // === MISSING AIRCRAFT COMMANDS ===
+            else if (var_name == "Aircraft.Gear") {
+                MessageAircraftGear.SetValue(value);
+                OutputDebugStringA("Creando mensaje Aircraft.Gear\n");
+                return MessageAircraftGear;
+            }
+            else if (var_name == "Aircraft.EngineThrottle1") {
+                MessageAircraftEngineThrottle1.SetValue(value);
+                OutputDebugStringA("Creando mensaje Aircraft.EngineThrottle1\n");
+                return MessageAircraftEngineThrottle1;
+            }
+            else if (var_name == "Aircraft.EngineThrottle2") {
+                MessageAircraftEngineThrottle2.SetValue(value);
+                OutputDebugStringA("Creando mensaje Aircraft.EngineThrottle2\n");
+                return MessageAircraftEngineThrottle2;
+            }
+            else if (var_name == "Aircraft.EngineThrottle3") {
+                MessageAircraftEngineThrottle3.SetValue(value);
+                OutputDebugStringA("Creando mensaje Aircraft.EngineThrottle3\n");
+                return MessageAircraftEngineThrottle3;
+            }
+            else if (var_name == "Aircraft.EngineThrottle4") {
+                MessageAircraftEngineThrottle4.SetValue(value);
+                OutputDebugStringA("Creando mensaje Aircraft.EngineThrottle4\n");
+                return MessageAircraftEngineThrottle4;
+            }
+            // === MISSING PERFORMANCE COMMANDS ===
+            else if (var_name == "Performance.Speed.VS0") {
+                MessagePerformanceSpeedVS0.SetValue(value);
+                OutputDebugStringA("Creando mensaje Performance.Speed.VS0\n");
+                return MessagePerformanceSpeedVS0;
+            }
+            else if (var_name == "Performance.Speed.VS1") {
+                MessagePerformanceSpeedVS1.SetValue(value);
+                OutputDebugStringA("Creando mensaje Performance.Speed.VS1\n");
+                return MessagePerformanceSpeedVS1;
+            }
+            else if (var_name == "Performance.Speed.VFE") {
+                MessagePerformanceSpeedVFE.SetValue(value);
+                OutputDebugStringA("Creando mensaje Performance.Speed.VFE\n");
+                return MessagePerformanceSpeedVFE;
+            }
+            else if (var_name == "Performance.Speed.VNO") {
+                MessagePerformanceSpeedVNO.SetValue(value);
+                OutputDebugStringA("Creando mensaje Performance.Speed.VNO\n");
+                return MessagePerformanceSpeedVNO;
+            }
+            else if (var_name == "Performance.Speed.VNE") {
+                MessagePerformanceSpeedVNE.SetValue(value);
+                OutputDebugStringA("Creando mensaje Performance.Speed.VNE\n");
+                return MessagePerformanceSpeedVNE;
+            }
+            // === MISSING WARNING COMMANDS ===
+            else if (var_name == "Warnings.MasterWarning") {
+                MessageWarningsMasterWarning.SetValue(value);
+                OutputDebugStringA("Creando mensaje Warnings.MasterWarning\n");
+                return MessageWarningsMasterWarning;
+            }
+            else if (var_name == "Warnings.MasterCaution") {
+                MessageWarningsMasterCaution.SetValue(value);
+                OutputDebugStringA("Creando mensaje Warnings.MasterCaution\n");
+                return MessageWarningsMasterCaution;
+            }
+            else if (var_name == "Warnings.LowOilPressure") {
+                MessageWarningsLowOilPressure.SetValue(value);
+                OutputDebugStringA("Creando mensaje Warnings.LowOilPressure\n");
+                return MessageWarningsLowOilPressure;
+            }
+            else if (var_name == "Warnings.LowFuelPressure") {
+                MessageWarningsLowFuelPressure.SetValue(value);
+                OutputDebugStringA("Creando mensaje Warnings.LowFuelPressure\n");
+                return MessageWarningsLowFuelPressure;
+            }
+            // NOTE: Aircraft.EngineMaster1-4, Aircraft.Starter1-4, Aircraft.Ignition1-4 
+            // are already defined above in the AIRCRAFT SYSTEM COMMANDS section
             else {
                 OutputDebugStringA(("Variable no soportada: " + var_name + "\n").c_str());
             }
