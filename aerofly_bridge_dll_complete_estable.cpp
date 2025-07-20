@@ -3,7 +3,7 @@
 // aerofly_bridge_dll_complete.cpp - Complete Multi-Interface Bridge for Aerofly FS4
 //
 // Features:
-// - All 285 variables exposed
+// - All 339 variables exposed
 // - Shared Memory (primary interface) 
 // - TCP Server (network interface)
 // - Bidirectional commands
@@ -33,7 +33,7 @@
 #include "tm_external_message.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// OPTIMIZED DATA STRUCTURE - All 285 Variables Organized
+// OPTIMIZED DATA STRUCTURE - All 339 Variables Organized
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct AeroflyBridgeData {
@@ -121,15 +121,15 @@ struct AeroflyBridgeData {
     uint32_t master_caution;       // Warnings.MasterCaution
     uint32_t reserved_warnings;    // For future use
 
-    // === ALL VARIABLES ARRAY (2128 bytes) - Complete Access ===
-    double all_variables[266];     // 266 variables by index (fits in 2800 bytes)
+    // === ALL VARIABLES ARRAY (2712 bytes) - Complete Access ===
+    double all_variables[339];     // 339 variables by index (complete SDK coverage)
 
-    // NOTE: Reduced from 285 to 266 variables to fit in 2800 bytes
-    // Total size: ~2800 bytes (efficient for shared memory)
+    // NOTE: Full implementation with all 339 variables from official SDK + extensions
+    // Total size: ~3384 bytes (optimized for complete variable coverage)
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// COMPLETE VARIABLE INDEX ENUM - All 285+ Variables from Official SDK
+// COMPLETE VARIABLE INDEX ENUM - All 339 Variables from Official SDK + Extensions
 // Order matches exactly with MESSAGE_LIST from original Aerofly sample
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -518,7 +518,7 @@ private:
     
 public:
     VariableMapper() {
-        // === AIRCRAFT VARIABLES ===
+        // === AIRCRAFT VARIABLES (0-94) ===
         name_to_index["Aircraft.UniversalTime"] = (int)VariableIndex::AIRCRAFT_UNIVERSAL_TIME;
         name_to_index["Aircraft.Altitude"] = (int)VariableIndex::AIRCRAFT_ALTITUDE;
         name_to_index["Aircraft.VerticalSpeed"] = (int)VariableIndex::AIRCRAFT_VERTICAL_SPEED;
@@ -556,12 +556,35 @@ public:
         name_to_index["Aircraft.AutoBrakeEngaged"] = (int)VariableIndex::AIRCRAFT_AUTO_BRAKE_ENGAGED;
         name_to_index["Aircraft.AutoBrakeRejectedTakeOff"] = (int)VariableIndex::AIRCRAFT_AUTO_BRAKE_REJECTED_TAKEOFF;
         name_to_index["Aircraft.RadarAltitude"] = (int)VariableIndex::AIRCRAFT_RADAR_ALTITUDE;
+        name_to_index["Aircraft.Name"] = (int)VariableIndex::AIRCRAFT_NAME;
+        name_to_index["Aircraft.NearestAirportIdentifier"] = (int)VariableIndex::AIRCRAFT_NEAREST_AIRPORT_IDENTIFIER;
+        name_to_index["Aircraft.NearestAirportName"] = (int)VariableIndex::AIRCRAFT_NEAREST_AIRPORT_NAME;
+        name_to_index["Aircraft.NearestAirportLocation"] = (int)VariableIndex::AIRCRAFT_NEAREST_AIRPORT_LOCATION;
+        name_to_index["Aircraft.NearestAirportElevation"] = (int)VariableIndex::AIRCRAFT_NEAREST_AIRPORT_ELEVATION;
+        name_to_index["Aircraft.BestAirportIdentifier"] = (int)VariableIndex::AIRCRAFT_BEST_AIRPORT_IDENTIFIER;
+        name_to_index["Aircraft.BestAirportName"] = (int)VariableIndex::AIRCRAFT_BEST_AIRPORT_NAME;
+        name_to_index["Aircraft.BestAirportLocation"] = (int)VariableIndex::AIRCRAFT_BEST_AIRPORT_LOCATION;
+        name_to_index["Aircraft.BestAirportElevation"] = (int)VariableIndex::AIRCRAFT_BEST_AIRPORT_ELEVATION;
+        name_to_index["Aircraft.BestRunwayIdentifier"] = (int)VariableIndex::AIRCRAFT_BEST_RUNWAY_IDENTIFIER;
+        name_to_index["Aircraft.BestRunwayElevation"] = (int)VariableIndex::AIRCRAFT_BEST_RUNWAY_ELEVATION;
+        name_to_index["Aircraft.BestRunwayThreshold"] = (int)VariableIndex::AIRCRAFT_BEST_RUNWAY_THRESHOLD;
+        name_to_index["Aircraft.BestRunwayEnd"] = (int)VariableIndex::AIRCRAFT_BEST_RUNWAY_END;
+        name_to_index["Aircraft.Category.Jet"] = (int)VariableIndex::AIRCRAFT_CATEGORY_JET;
+        name_to_index["Aircraft.Category.Glider"] = (int)VariableIndex::AIRCRAFT_CATEGORY_GLIDER;
         name_to_index["Aircraft.OnGround"] = (int)VariableIndex::AIRCRAFT_ON_GROUND;
         name_to_index["Aircraft.OnRunway"] = (int)VariableIndex::AIRCRAFT_ON_RUNWAY;
         name_to_index["Aircraft.Crashed"] = (int)VariableIndex::AIRCRAFT_CRASHED;
         name_to_index["Aircraft.Power"] = (int)VariableIndex::AIRCRAFT_POWER;
         name_to_index["Aircraft.NormalizedPower"] = (int)VariableIndex::AIRCRAFT_NORMALIZED_POWER;
         name_to_index["Aircraft.NormalizedPowerTarget"] = (int)VariableIndex::AIRCRAFT_NORMALIZED_POWER_TARGET;
+        name_to_index["Aircraft.Trim"] = (int)VariableIndex::AIRCRAFT_TRIM;
+        name_to_index["Aircraft.PitchTrim"] = (int)VariableIndex::AIRCRAFT_PITCH_TRIM;
+        name_to_index["Aircraft.PitchTrimScaling"] = (int)VariableIndex::AIRCRAFT_PITCH_TRIM_SCALING;
+        name_to_index["Aircraft.PitchTrimOffset"] = (int)VariableIndex::AIRCRAFT_PITCH_TRIM_OFFSET;
+        name_to_index["Aircraft.RudderTrim"] = (int)VariableIndex::AIRCRAFT_RUDDER_TRIM;
+        name_to_index["Aircraft.AutoPitchTrim"] = (int)VariableIndex::AIRCRAFT_AUTO_PITCH_TRIM;
+        name_to_index["Aircraft.YawDamperEnabled"] = (int)VariableIndex::AIRCRAFT_YAW_DAMPER_ENABLED;
+        name_to_index["Aircraft.RudderPedalsDisconnected"] = (int)VariableIndex::AIRCRAFT_RUDDER_PEDALS_DISCONNECTED;
         name_to_index["Aircraft.Starter"] = (int)VariableIndex::AIRCRAFT_STARTER;
         name_to_index["Aircraft.Starter1"] = (int)VariableIndex::AIRCRAFT_STARTER_1;
         name_to_index["Aircraft.Starter2"] = (int)VariableIndex::AIRCRAFT_STARTER_2;
@@ -572,6 +595,8 @@ public:
         name_to_index["Aircraft.Ignition2"] = (int)VariableIndex::AIRCRAFT_IGNITION_2;
         name_to_index["Aircraft.Ignition3"] = (int)VariableIndex::AIRCRAFT_IGNITION_3;
         name_to_index["Aircraft.Ignition4"] = (int)VariableIndex::AIRCRAFT_IGNITION_4;
+        name_to_index["Aircraft.ThrottleLimit"] = (int)VariableIndex::AIRCRAFT_THROTTLE_LIMIT;
+        name_to_index["Aircraft.Reverse"] = (int)VariableIndex::AIRCRAFT_REVERSE;
         name_to_index["Aircraft.EngineMaster1"] = (int)VariableIndex::AIRCRAFT_ENGINE_MASTER_1;
         name_to_index["Aircraft.EngineMaster2"] = (int)VariableIndex::AIRCRAFT_ENGINE_MASTER_2;
         name_to_index["Aircraft.EngineMaster3"] = (int)VariableIndex::AIRCRAFT_ENGINE_MASTER_3;
@@ -590,7 +615,7 @@ public:
         name_to_index["Aircraft.EngineRunning4"] = (int)VariableIndex::AIRCRAFT_ENGINE_RUNNING_4;
         name_to_index["Aircraft.APUAvailable"] = (int)VariableIndex::AIRCRAFT_APU_AVAILABLE;
         
-        // === PERFORMANCE SPEEDS ===
+        // === PERFORMANCE SPEEDS (95-104) ===
         name_to_index["Performance.Speed.VS0"] = (int)VariableIndex::PERFORMANCE_SPEED_VS0;
         name_to_index["Performance.Speed.VS1"] = (int)VariableIndex::PERFORMANCE_SPEED_VS1;
         name_to_index["Performance.Speed.VFE"] = (int)VariableIndex::PERFORMANCE_SPEED_VFE;
@@ -602,12 +627,21 @@ public:
         name_to_index["Performance.Speed.MinimumFlapRetraction"] = (int)VariableIndex::PERFORMANCE_SPEED_MINIMUM_FLAP_RETRACTION;
         name_to_index["Performance.Speed.MaximumFlapExtension"] = (int)VariableIndex::PERFORMANCE_SPEED_MAXIMUM_FLAP_EXTENSION;
         
-        // === NAVIGATION ===
+        // === CONFIGURATION (105-106) ===
+        name_to_index["Configuration.SelectedTakeOffFlaps"] = (int)VariableIndex::CONFIGURATION_SELECTED_TAKEOFF_FLAPS;
+        name_to_index["Configuration.SelectedLandingFlaps"] = (int)VariableIndex::CONFIGURATION_SELECTED_LANDING_FLAPS;
+        
+        // === FLIGHT MANAGEMENT SYSTEM (107) ===
+        name_to_index["FlightManagementSystem.FlightNumber"] = (int)VariableIndex::FMS_FLIGHT_NUMBER;
+        
+        // === NAVIGATION (108-141) ===
         name_to_index["Navigation.SelectedCourse1"] = (int)VariableIndex::NAVIGATION_SELECTED_COURSE_1;
         name_to_index["Navigation.SelectedCourse2"] = (int)VariableIndex::NAVIGATION_SELECTED_COURSE_2;
+        name_to_index["Navigation.NAV1Identifier"] = (int)VariableIndex::NAVIGATION_NAV1_IDENTIFIER;
         name_to_index["Navigation.NAV1Frequency"] = (int)VariableIndex::NAVIGATION_NAV1_FREQUENCY;
         name_to_index["Navigation.NAV1StandbyFrequency"] = (int)VariableIndex::NAVIGATION_NAV1_STANDBY_FREQUENCY;
         name_to_index["Navigation.NAV1FrequencySwap"] = (int)VariableIndex::NAVIGATION_NAV1_FREQUENCY_SWAP;
+        name_to_index["Navigation.NAV2Identifier"] = (int)VariableIndex::NAVIGATION_NAV2_IDENTIFIER;
         name_to_index["Navigation.NAV2Frequency"] = (int)VariableIndex::NAVIGATION_NAV2_FREQUENCY;
         name_to_index["Navigation.NAV2StandbyFrequency"] = (int)VariableIndex::NAVIGATION_NAV2_STANDBY_FREQUENCY;
         name_to_index["Navigation.NAV2FrequencySwap"] = (int)VariableIndex::NAVIGATION_NAV2_FREQUENCY_SWAP;
@@ -619,6 +653,16 @@ public:
         name_to_index["Navigation.DME2Distance"] = (int)VariableIndex::NAVIGATION_DME2_DISTANCE;
         name_to_index["Navigation.DME2Time"] = (int)VariableIndex::NAVIGATION_DME2_TIME;
         name_to_index["Navigation.DME2Speed"] = (int)VariableIndex::NAVIGATION_DME2_SPEED;
+        name_to_index["Navigation.ILS1Identifier"] = (int)VariableIndex::NAVIGATION_ILS1_IDENTIFIER;
+        name_to_index["Navigation.ILS1Course"] = (int)VariableIndex::NAVIGATION_ILS1_COURSE;
+        name_to_index["Navigation.ILS1Frequency"] = (int)VariableIndex::NAVIGATION_ILS1_FREQUENCY;
+        name_to_index["Navigation.ILS1StandbyFrequency"] = (int)VariableIndex::NAVIGATION_ILS1_STANDBY_FREQUENCY;
+        name_to_index["Navigation.ILS1FrequencySwap"] = (int)VariableIndex::NAVIGATION_ILS1_FREQUENCY_SWAP;
+        name_to_index["Navigation.ILS2Identifier"] = (int)VariableIndex::NAVIGATION_ILS2_IDENTIFIER;
+        name_to_index["Navigation.ILS2Course"] = (int)VariableIndex::NAVIGATION_ILS2_COURSE;
+        name_to_index["Navigation.ILS2Frequency"] = (int)VariableIndex::NAVIGATION_ILS2_FREQUENCY;
+        name_to_index["Navigation.ILS2StandbyFrequency"] = (int)VariableIndex::NAVIGATION_ILS2_STANDBY_FREQUENCY;
+        name_to_index["Navigation.ILS2FrequencySwap"] = (int)VariableIndex::NAVIGATION_ILS2_FREQUENCY_SWAP;
         name_to_index["Navigation.ADF1Frequency"] = (int)VariableIndex::NAVIGATION_ADF1_FREQUENCY;
         name_to_index["Navigation.ADF1StandbyFrequency"] = (int)VariableIndex::NAVIGATION_ADF1_STANDBY_FREQUENCY;
         name_to_index["Navigation.ADF1FrequencySwap"] = (int)VariableIndex::NAVIGATION_ADF1_FREQUENCY_SWAP;
@@ -626,7 +670,7 @@ public:
         name_to_index["Navigation.ADF2StandbyFrequency"] = (int)VariableIndex::NAVIGATION_ADF2_STANDBY_FREQUENCY;
         name_to_index["Navigation.ADF2FrequencySwap"] = (int)VariableIndex::NAVIGATION_ADF2_FREQUENCY_SWAP;
         
-        // === COMMUNICATION ===
+        // === COMMUNICATION (142-152) ===
         name_to_index["Communication.COM1Frequency"] = (int)VariableIndex::COMMUNICATION_COM1_FREQUENCY;
         name_to_index["Communication.COM1StandbyFrequency"] = (int)VariableIndex::COMMUNICATION_COM1_STANDBY_FREQUENCY;
         name_to_index["Communication.COM1FrequencySwap"] = (int)VariableIndex::COMMUNICATION_COM1_FREQUENCY_SWAP;
@@ -639,7 +683,7 @@ public:
         name_to_index["Communication.TransponderCode"] = (int)VariableIndex::COMMUNICATION_TRANSPONDER_CODE;
         name_to_index["Communication.TransponderCursor"] = (int)VariableIndex::COMMUNICATION_TRANSPONDER_CURSOR;
         
-        // === AUTOPILOT ===
+        // === AUTOPILOT (153-180) ===
         name_to_index["Autopilot.Master"] = (int)VariableIndex::AUTOPILOT_MASTER;
         name_to_index["Autopilot.Disengage"] = (int)VariableIndex::AUTOPILOT_DISENGAGE;
         name_to_index["Autopilot.Heading"] = (int)VariableIndex::AUTOPILOT_HEADING;
@@ -649,24 +693,67 @@ public:
         name_to_index["Autopilot.SelectedHeading"] = (int)VariableIndex::AUTOPILOT_SELECTED_HEADING;
         name_to_index["Autopilot.SelectedAltitude"] = (int)VariableIndex::AUTOPILOT_SELECTED_ALTITUDE;
         name_to_index["Autopilot.SelectedVerticalSpeed"] = (int)VariableIndex::AUTOPILOT_SELECTED_VERTICAL_SPEED;
+        name_to_index["Autopilot.SelectedAltitudeScale"] = (int)VariableIndex::AUTOPILOT_SELECTED_ALTITUDE_SCALE;
+        name_to_index["Autopilot.ActiveLateralMode"] = (int)VariableIndex::AUTOPILOT_ACTIVE_LATERAL_MODE;
+        name_to_index["Autopilot.ArmedLateralMode"] = (int)VariableIndex::AUTOPILOT_ARMED_LATERAL_MODE;
+        name_to_index["Autopilot.ActiveVerticalMode"] = (int)VariableIndex::AUTOPILOT_ACTIVE_VERTICAL_MODE;
+        name_to_index["Autopilot.ArmedVerticalMode"] = (int)VariableIndex::AUTOPILOT_ARMED_VERTICAL_MODE;
+        name_to_index["Autopilot.ArmedApproachMode"] = (int)VariableIndex::AUTOPILOT_ARMED_APPROACH_MODE;
+        name_to_index["Autopilot.ActiveAutoThrottleMode"] = (int)VariableIndex::AUTOPILOT_ACTIVE_AUTO_THROTTLE_MODE;
+        name_to_index["Autopilot.ActiveCollectiveMode"] = (int)VariableIndex::AUTOPILOT_ACTIVE_COLLECTIVE_MODE;
+        name_to_index["Autopilot.ArmedCollectiveMode"] = (int)VariableIndex::AUTOPILOT_ARMED_COLLECTIVE_MODE;
+        name_to_index["Autopilot.Type"] = (int)VariableIndex::AUTOPILOT_TYPE;
         name_to_index["Autopilot.Engaged"] = (int)VariableIndex::AUTOPILOT_ENGAGED;
+        name_to_index["Autopilot.UseMachNumber"] = (int)VariableIndex::AUTOPILOT_USE_MACH_NUMBER;
+        name_to_index["Autopilot.SpeedManaged"] = (int)VariableIndex::AUTOPILOT_SPEED_MANAGED;
+        name_to_index["Autopilot.TargetAirspeed"] = (int)VariableIndex::AUTOPILOT_TARGET_AIRSPEED;
+        name_to_index["Autopilot.Aileron"] = (int)VariableIndex::AUTOPILOT_AILERON;
+        name_to_index["Autopilot.Elevator"] = (int)VariableIndex::AUTOPILOT_ELEVATOR;
+        name_to_index["AutoThrottle.Type"] = (int)VariableIndex::AUTO_THROTTLE_TYPE;
         name_to_index["Autopilot.ThrottleEngaged"] = (int)VariableIndex::AUTOPILOT_THROTTLE_ENGAGED;
         name_to_index["Autopilot.ThrottleCommand"] = (int)VariableIndex::AUTOPILOT_THROTTLE_COMMAND;
         
-        // === CONTROLS ===
+        // === FLIGHT DIRECTOR (181-183) ===
+        name_to_index["FlightDirector.Pitch"] = (int)VariableIndex::FLIGHT_DIRECTOR_PITCH;
+        name_to_index["FlightDirector.Bank"] = (int)VariableIndex::FLIGHT_DIRECTOR_BANK;
+        name_to_index["FlightDirector.Yaw"] = (int)VariableIndex::FLIGHT_DIRECTOR_YAW;
+        
+        // === COPILOT (184-191) ===
+        name_to_index["Copilot.Heading"] = (int)VariableIndex::COPILOT_HEADING;
+        name_to_index["Copilot.Altitude"] = (int)VariableIndex::COPILOT_ALTITUDE;
+        name_to_index["Copilot.Airspeed"] = (int)VariableIndex::COPILOT_AIRSPEED;
+        name_to_index["Copilot.VerticalSpeed"] = (int)VariableIndex::COPILOT_VERTICAL_SPEED;
+        name_to_index["Copilot.Aileron"] = (int)VariableIndex::COPILOT_AILERON;
+        name_to_index["Copilot.Elevator"] = (int)VariableIndex::COPILOT_ELEVATOR;
+        name_to_index["Copilot.Throttle"] = (int)VariableIndex::COPILOT_THROTTLE;
+        name_to_index["Copilot.AutoRudder"] = (int)VariableIndex::COPILOT_AUTO_RUDDER;
+        
+        // === CONTROLS (192-260) ===
         name_to_index["Controls.Throttle"] = (int)VariableIndex::CONTROLS_THROTTLE;
         name_to_index["Controls.Throttle1"] = (int)VariableIndex::CONTROLS_THROTTLE_1;
         name_to_index["Controls.Throttle2"] = (int)VariableIndex::CONTROLS_THROTTLE_2;
         name_to_index["Controls.Throttle3"] = (int)VariableIndex::CONTROLS_THROTTLE_3;
         name_to_index["Controls.Throttle4"] = (int)VariableIndex::CONTROLS_THROTTLE_4;
+        name_to_index["Controls.Throttle1Move"] = (int)VariableIndex::CONTROLS_THROTTLE_1_MOVE;
+        name_to_index["Controls.Throttle2Move"] = (int)VariableIndex::CONTROLS_THROTTLE_2_MOVE;
+        name_to_index["Controls.Throttle3Move"] = (int)VariableIndex::CONTROLS_THROTTLE_3_MOVE;
+        name_to_index["Controls.Throttle4Move"] = (int)VariableIndex::CONTROLS_THROTTLE_4_MOVE;
         name_to_index["Controls.Pitch.Input"] = (int)VariableIndex::CONTROLS_PITCH_INPUT;
+        name_to_index["Controls.Pitch.InputOffset"] = (int)VariableIndex::CONTROLS_PITCH_INPUT_OFFSET;
         name_to_index["Controls.Roll.Input"] = (int)VariableIndex::CONTROLS_ROLL_INPUT;
+        name_to_index["Controls.Roll.InputOffset"] = (int)VariableIndex::CONTROLS_ROLL_INPUT_OFFSET;
         name_to_index["Controls.Yaw.Input"] = (int)VariableIndex::CONTROLS_YAW_INPUT;
+        name_to_index["Controls.Yaw.InputActive"] = (int)VariableIndex::CONTROLS_YAW_INPUT_ACTIVE;
         name_to_index["Controls.Flaps"] = (int)VariableIndex::CONTROLS_FLAPS;
+        name_to_index["Controls.FlapsEvent"] = (int)VariableIndex::CONTROLS_FLAPS_EVENT;
         name_to_index["Controls.Gear"] = (int)VariableIndex::CONTROLS_GEAR;
+        name_to_index["Controls.GearToggle"] = (int)VariableIndex::CONTROLS_GEAR_TOGGLE;
         name_to_index["Controls.WheelBrake.Left"] = (int)VariableIndex::CONTROLS_WHEEL_BRAKE_LEFT;
         name_to_index["Controls.WheelBrake.Right"] = (int)VariableIndex::CONTROLS_WHEEL_BRAKE_RIGHT;
+        name_to_index["Controls.WheelBrake.LeftActive"] = (int)VariableIndex::CONTROLS_WHEEL_BRAKE_LEFT_ACTIVE;
+        name_to_index["Controls.WheelBrake.RightActive"] = (int)VariableIndex::CONTROLS_WHEEL_BRAKE_RIGHT_ACTIVE;
         name_to_index["Controls.AirBrake"] = (int)VariableIndex::CONTROLS_AIR_BRAKE;
+        name_to_index["Controls.AirBrakeActive"] = (int)VariableIndex::CONTROLS_AIR_BRAKE_ACTIVE;
         name_to_index["Controls.AirBrake.Arm"] = (int)VariableIndex::CONTROLS_AIR_BRAKE_ARM;
         name_to_index["Controls.GliderAirBrake"] = (int)VariableIndex::CONTROLS_GLIDER_AIR_BRAKE;
         name_to_index["Controls.PropellerSpeed1"] = (int)VariableIndex::CONTROLS_PROPELLER_SPEED_1;
@@ -678,13 +765,45 @@ public:
         name_to_index["Controls.Mixture2"] = (int)VariableIndex::CONTROLS_MIXTURE_2;
         name_to_index["Controls.Mixture3"] = (int)VariableIndex::CONTROLS_MIXTURE_3;
         name_to_index["Controls.Mixture4"] = (int)VariableIndex::CONTROLS_MIXTURE_4;
+        name_to_index["Controls.ThrustReverse"] = (int)VariableIndex::CONTROLS_THRUST_REVERSE;
+        name_to_index["Controls.ThrustReverse1"] = (int)VariableIndex::CONTROLS_THRUST_REVERSE_1;
+        name_to_index["Controls.ThrustReverse2"] = (int)VariableIndex::CONTROLS_THRUST_REVERSE_2;
+        name_to_index["Controls.ThrustReverse3"] = (int)VariableIndex::CONTROLS_THRUST_REVERSE_3;
+        name_to_index["Controls.ThrustReverse4"] = (int)VariableIndex::CONTROLS_THRUST_REVERSE_4;
         name_to_index["Controls.Collective"] = (int)VariableIndex::CONTROLS_COLLECTIVE;
         name_to_index["Controls.CyclicPitch"] = (int)VariableIndex::CONTROLS_CYCLIC_PITCH;
         name_to_index["Controls.CyclicRoll"] = (int)VariableIndex::CONTROLS_CYCLIC_ROLL;
         name_to_index["Controls.TailRotor"] = (int)VariableIndex::CONTROLS_TAIL_ROTOR;
         name_to_index["Controls.RotorBrake"] = (int)VariableIndex::CONTROLS_ROTOR_BRAKE;
+        name_to_index["Controls.HelicopterThrottle1"] = (int)VariableIndex::CONTROLS_HELICOPTER_THROTTLE_1;
+        name_to_index["Controls.HelicopterThrottle2"] = (int)VariableIndex::CONTROLS_HELICOPTER_THROTTLE_2;
+        name_to_index["Controls.Trim"] = (int)VariableIndex::CONTROLS_TRIM;
+        name_to_index["Controls.TrimStep"] = (int)VariableIndex::CONTROLS_TRIM_STEP;
+        name_to_index["Controls.TrimMove"] = (int)VariableIndex::CONTROLS_TRIM_MOVE;
+        name_to_index["Controls.AileronTrim"] = (int)VariableIndex::CONTROLS_AILERON_TRIM;
+        name_to_index["Controls.RudderTrim"] = (int)VariableIndex::CONTROLS_RUDDER_TRIM;
+        name_to_index["Controls.Tiller"] = (int)VariableIndex::CONTROLS_TILLER;
+        name_to_index["Controls.PedalsDisconnect"] = (int)VariableIndex::CONTROLS_PEDALS_DISCONNECT;
+        name_to_index["Controls.NoseWheelSteering"] = (int)VariableIndex::CONTROLS_NOSE_WHEEL_STEERING;
+        name_to_index["Controls.Lighting.Panel"] = (int)VariableIndex::CONTROLS_LIGHTING_PANEL;
+        name_to_index["Controls.Lighting.Instruments"] = (int)VariableIndex::CONTROLS_LIGHTING_INSTRUMENTS;
+        name_to_index["Controls.PressureSetting0"] = (int)VariableIndex::CONTROLS_PRESSURE_SETTING_0;
+        name_to_index["Controls.PressureSettingStandard0"] = (int)VariableIndex::CONTROLS_PRESSURE_SETTING_STANDARD_0;
+        name_to_index["Controls.PressureSettingUnit0"] = (int)VariableIndex::CONTROLS_PRESSURE_SETTING_UNIT_0;
+        name_to_index["Controls.PressureSetting1"] = (int)VariableIndex::CONTROLS_PRESSURE_SETTING_1;
+        name_to_index["Controls.PressureSettingStandard1"] = (int)VariableIndex::CONTROLS_PRESSURE_SETTING_STANDARD_1;
+        name_to_index["Controls.PressureSettingUnit1"] = (int)VariableIndex::CONTROLS_PRESSURE_SETTING_UNIT_1;
+        name_to_index["Controls.PressureSetting2"] = (int)VariableIndex::CONTROLS_PRESSURE_SETTING_2;
+        name_to_index["Controls.PressureSettingStandard2"] = (int)VariableIndex::CONTROLS_PRESSURE_SETTING_STANDARD_2;
+        name_to_index["Controls.PressureSettingUnit2"] = (int)VariableIndex::CONTROLS_PRESSURE_SETTING_UNIT_2;
+        name_to_index["Controls.TransitionAltitude"] = (int)VariableIndex::CONTROLS_TRANSITION_ALTITUDE;
+        name_to_index["Controls.TransitionLevel"] = (int)VariableIndex::CONTROLS_TRANSITION_LEVEL;
         
-        // === WARNINGS ===
+        // === PRESSURIZATION (261-262) ===
+        name_to_index["Pressurization.LandingElevation"] = (int)VariableIndex::PRESSURIZATION_LANDING_ELEVATION;
+        name_to_index["Pressurization.LandingElevationManual"] = (int)VariableIndex::PRESSURIZATION_LANDING_ELEVATION_MANUAL;
+        
+        // === WARNINGS (263-272) ===
         name_to_index["Warnings.MasterWarning"] = (int)VariableIndex::WARNINGS_MASTER_WARNING;
         name_to_index["Warnings.MasterCaution"] = (int)VariableIndex::WARNINGS_MASTER_CAUTION;
         name_to_index["Warnings.EngineFire"] = (int)VariableIndex::WARNINGS_ENGINE_FIRE;
@@ -693,14 +812,88 @@ public:
         name_to_index["Warnings.LowHydraulicPressure"] = (int)VariableIndex::WARNINGS_LOW_HYDRAULIC_PRESSURE;
         name_to_index["Warnings.LowVoltage"] = (int)VariableIndex::WARNINGS_LOW_VOLTAGE;
         name_to_index["Warnings.AltitudeAlert"] = (int)VariableIndex::WARNINGS_ALTITUDE_ALERT;
+        name_to_index["Warnings.WarningActive"] = (int)VariableIndex::WARNINGS_WARNING_ACTIVE;
+        name_to_index["Warnings.WarningMute"] = (int)VariableIndex::WARNINGS_WARNING_MUTE;
         
-        // === HASH MAPPINGS ===
+        // === VIEW CONTROLS (273-302) ===
+        name_to_index["View.DisplayName"] = (int)VariableIndex::VIEW_DISPLAY_NAME;
+        name_to_index["View.Internal"] = (int)VariableIndex::VIEW_INTERNAL;
+        name_to_index["View.Follow"] = (int)VariableIndex::VIEW_FOLLOW;
+        name_to_index["View.External"] = (int)VariableIndex::VIEW_EXTERNAL;
+        name_to_index["View.Category"] = (int)VariableIndex::VIEW_CATEGORY;
+        name_to_index["View.Mode"] = (int)VariableIndex::VIEW_MODE;
+        name_to_index["View.Zoom"] = (int)VariableIndex::VIEW_ZOOM;
+        name_to_index["View.Pan.Horizontal"] = (int)VariableIndex::VIEW_PAN_HORIZONTAL;
+        name_to_index["View.Pan.HorizontalMove"] = (int)VariableIndex::VIEW_PAN_HORIZONTAL_MOVE;
+        name_to_index["View.Pan.Vertical"] = (int)VariableIndex::VIEW_PAN_VERTICAL;
+        name_to_index["View.Pan.VerticalMove"] = (int)VariableIndex::VIEW_PAN_VERTICAL_MOVE;
+        name_to_index["View.Pan.Center"] = (int)VariableIndex::VIEW_PAN_CENTER;
+        name_to_index["View.Look.Horizontal"] = (int)VariableIndex::VIEW_LOOK_HORIZONTAL;
+        name_to_index["View.Look.Vertical"] = (int)VariableIndex::VIEW_LOOK_VERTICAL;
+        name_to_index["View.Roll"] = (int)VariableIndex::VIEW_ROLL;
+        name_to_index["View.OffsetX"] = (int)VariableIndex::VIEW_OFFSET_X;
+        name_to_index["View.OffsetXMove"] = (int)VariableIndex::VIEW_OFFSET_X_MOVE;
+        name_to_index["View.OffsetY"] = (int)VariableIndex::VIEW_OFFSET_Y;
+        name_to_index["View.OffsetYMove"] = (int)VariableIndex::VIEW_OFFSET_Y_MOVE;
+        name_to_index["View.OffsetZ"] = (int)VariableIndex::VIEW_OFFSET_Z;
+        name_to_index["View.OffsetZMove"] = (int)VariableIndex::VIEW_OFFSET_Z_MOVE;
+        name_to_index["View.Position"] = (int)VariableIndex::VIEW_POSITION;
+        name_to_index["View.Direction"] = (int)VariableIndex::VIEW_DIRECTION;
+        name_to_index["View.Up"] = (int)VariableIndex::VIEW_UP;
+        name_to_index["View.FieldOfView"] = (int)VariableIndex::VIEW_FIELD_OF_VIEW;
+        name_to_index["View.AspectRatio"] = (int)VariableIndex::VIEW_ASPECT_RATIO;
+        name_to_index["View.FreePosition"] = (int)VariableIndex::VIEW_FREE_POSITION;
+        name_to_index["View.FreeLookDirection"] = (int)VariableIndex::VIEW_FREE_LOOK_DIRECTION;
+        name_to_index["View.FreeUp"] = (int)VariableIndex::VIEW_FREE_UP;
+        name_to_index["View.FreeFieldOfView"] = (int)VariableIndex::VIEW_FREE_FIELD_OF_VIEW;
+        
+        // === SIMULATION CONTROLS (303-320) ===
+        name_to_index["Simulation.Pause"] = (int)VariableIndex::SIMULATION_PAUSE;
+        name_to_index["Simulation.FlightInformation"] = (int)VariableIndex::SIMULATION_FLIGHT_INFORMATION;
+        name_to_index["Simulation.MovingMap"] = (int)VariableIndex::SIMULATION_MOVING_MAP;
+        name_to_index["Simulation.Sound"] = (int)VariableIndex::SIMULATION_SOUND;
+        name_to_index["Simulation.LiftUp"] = (int)VariableIndex::SIMULATION_LIFT_UP;
+        name_to_index["Simulation.SettingPosition"] = (int)VariableIndex::SIMULATION_SETTING_POSITION;
+        name_to_index["Simulation.SettingOrientation"] = (int)VariableIndex::SIMULATION_SETTING_ORIENTATION;
+        name_to_index["Simulation.SettingVelocity"] = (int)VariableIndex::SIMULATION_SETTING_VELOCITY;
+        name_to_index["Simulation.SettingSet"] = (int)VariableIndex::SIMULATION_SETTING_SET;
+        name_to_index["Simulation.TimeChange"] = (int)VariableIndex::SIMULATION_TIME_CHANGE;
+        name_to_index["Simulation.Visibility"] = (int)VariableIndex::SIMULATION_VISIBILITY;
+        name_to_index["Simulation.Time"] = (int)VariableIndex::SIMULATION_TIME;
+        name_to_index["Simulation.UseMouseControl"] = (int)VariableIndex::SIMULATION_USE_MOUSE_CONTROL;
+        name_to_index["Simulation.PlaybackStart"] = (int)VariableIndex::SIMULATION_PLAYBACK_START;
+        name_to_index["Simulation.PlaybackStop"] = (int)VariableIndex::SIMULATION_PLAYBACK_STOP;
+        name_to_index["Simulation.PlaybackPosition"] = (int)VariableIndex::SIMULATION_PLAYBACK_SET_POSITION;
+        name_to_index["Simulation.ExternalPosition"] = (int)VariableIndex::SIMULATION_EXTERNAL_POSITION;
+        name_to_index["Simulation.ExternalOrientation"] = (int)VariableIndex::SIMULATION_EXTERNAL_ORIENTATION;
+        
+        // === COMMAND CONTROLS (321-330) ===
+        name_to_index["Command.Execute"] = (int)VariableIndex::COMMAND_EXECUTE;
+        name_to_index["Command.Back"] = (int)VariableIndex::COMMAND_BACK;
+        name_to_index["Command.Up"] = (int)VariableIndex::COMMAND_UP;
+        name_to_index["Command.Down"] = (int)VariableIndex::COMMAND_DOWN;
+        name_to_index["Command.Left"] = (int)VariableIndex::COMMAND_LEFT;
+        name_to_index["Command.Right"] = (int)VariableIndex::COMMAND_RIGHT;
+        name_to_index["Command.MoveHorizontal"] = (int)VariableIndex::COMMAND_MOVE_HORIZONTAL;
+        name_to_index["Command.MoveVertical"] = (int)VariableIndex::COMMAND_MOVE_VERTICAL;
+        name_to_index["Command.Rotate"] = (int)VariableIndex::COMMAND_ROTATE;
+        name_to_index["Command.Zoom"] = (int)VariableIndex::COMMAND_ZOOM;
+        
+        // === SPECIAL/IGNORE VARIABLES (331-338) ===
+        name_to_index["Controls.Speed"] = (int)VariableIndex::CONTROLS_SPEED;
+        name_to_index["FlightManagementSystem.Data0"] = (int)VariableIndex::FMS_DATA_0;
+        name_to_index["FlightManagementSystem.Data1"] = (int)VariableIndex::FMS_DATA_1;
+        name_to_index["Navigation.NAV1Data"] = (int)VariableIndex::NAV1_DATA;
+        name_to_index["Navigation.NAV2Data"] = (int)VariableIndex::NAV2_DATA;
+        name_to_index["Navigation.NAV3Data"] = (int)VariableIndex::NAV3_DATA;
+        name_to_index["Navigation.ILS1Data"] = (int)VariableIndex::ILS1_DATA;
+        name_to_index["Navigation.ILS2Data"] = (int)VariableIndex::ILS2_DATA;
+        
         // Hash mappings will be initialized later after MESSAGE_LIST definitions
         // For now, name mappings are sufficient for CommandProcessor functionality
         
-        // NOTE: Complete name mapping with all critical variables from VariableIndex enum
-        // Name mappings are comprehensive and sufficient for CommandProcessor functionality
-        // Hash mappings can be added later after MESSAGE_LIST definitions if needed
+        // NOTE: COMPLETE mapping with ALL 339 variables from VariableIndex enum
+        // Comprehensive coverage for full bidirectional control and monitoring
     }
     
     int GetIndex(const std::string& name) const {
@@ -715,7 +908,7 @@ public:
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// MESSAGE DEFINITIONS - All 285 Variables from Original SDK
+// MESSAGE DEFINITIONS - All 339 Variables from SDK + Extensions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define TM_MESSAGE( a1, a2, a3, a4, a5, a6, a7 )       static tm_external_message Message##a1( ##a2, a3, a4, a5, a6 );
@@ -2643,7 +2836,7 @@ extern "C" {
 // ✅ Shared Memory interface (primary, ultra-fast)
 // ✅ TCP Server interface (network access, JSON format)
 // ✅ Bidirectional commands (read + write)
-// ✅ All 285 variables supported (subset shown, pattern established)
+// ✅ All 339 variables supported (subset shown, pattern established)
 // ✅ Thread-safe operations
 // ✅ Auto-reconnection
 // ✅ Performance optimized
@@ -2655,7 +2848,7 @@ extern "C" {
 //
 // Shared Memory:
 // - Name: "AeroflyBridgeData"
-// - Size: ~2800 bytes
+// - Size: ~3384 bytes
 // - Access: Direct memory mapping
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////

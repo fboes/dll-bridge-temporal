@@ -1,4 +1,4 @@
-# aerofly_variable_monitor_corrected.py - Complete GUI with CORRECTED offsets
+# aerofly_variable_monitor_v6_complete.py - Complete GUI with ALL 339 Variables
 import tkinter as tk
 from tkinter import ttk, scrolledtext
 import mmap
@@ -11,8 +11,8 @@ import time
 class AeroflyVariableMonitor:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Aerofly FS4 - Variable Monitor & Control Panel (CORRECTED)")
-        self.root.geometry("1400x900")
+        self.root.title("Aerofly FS4 - Complete Variable Monitor & Control Panel (ALL 339 VARIABLES)")
+        self.root.geometry("1600x1000")
         
         # Connection objects
         self.shared_memory = None
@@ -63,6 +63,15 @@ class AeroflyVariableMonitor:
         self.create_engine_tab()
         self.create_environment_tab()
         self.create_warnings_tab()
+        
+        # NEW TABS - Complete SDK Coverage
+        self.create_configuration_tab()
+        self.create_fms_tab()
+        self.create_flight_director_tab()
+        self.create_copilot_tab()
+        self.create_pressurization_tab()
+        self.create_view_controls_tab()
+        self.create_simulation_tab()
         self.create_systems_tab()
         
         # All Variables tab (keep at the end)
@@ -221,10 +230,53 @@ class AeroflyVariableMonitor:
         self.add_readonly_var(state_frame, "Gear Position", "Aircraft.Gear", row, 0, lambda x: f"{x:.2f}")
         self.add_readonly_var(state_frame, "Flaps Position", "Aircraft.Flaps", row, 2, lambda x: f"{x*100:.1f}%")
         self.add_readonly_var(state_frame, "Slats Position", "Aircraft.Slats", row, 4, lambda x: f"{x:.2f}")
-        row += 2
+        row += 1
         self.add_readonly_var(state_frame, "Throttle", "Aircraft.Throttle", row, 0, lambda x: f"{x:.2f}")
         self.add_readonly_var(state_frame, "Air Brake", "Aircraft.AirBrake", row, 2, lambda x: f"{x:.2f}")
         self.add_readonly_var(state_frame, "Parking Brake", "Aircraft.ParkingBrake", row, 4, lambda x: "ON" if x > 0.5 else "OFF")
+        
+        # Aircraft Systems frame (NEW)
+        systems_frame = ttk.LabelFrame(scrollable_frame, text="Aircraft Systems", padding="5")
+        systems_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        row = 0
+        self.add_readonly_var(systems_frame, "Aircraft Name", "Aircraft.Name", row, 0, lambda x: str(x))
+        self.add_readonly_var(systems_frame, "Category Jet", "Aircraft.Category.Jet", row, 2, lambda x: "Yes" if x > 0.5 else "No")
+        self.add_readonly_var(systems_frame, "Category Glider", "Aircraft.Category.Glider", row, 4, lambda x: "Yes" if x > 0.5 else "No")
+        row += 1
+        self.add_readonly_var(systems_frame, "Radar Altitude", "Aircraft.RadarAltitude", row, 0, lambda x: f"{x:.1f} m")
+        self.add_readonly_var(systems_frame, "Power", "Aircraft.Power", row, 2, lambda x: f"{x:.2f}")
+        self.add_readonly_var(systems_frame, "Normalized Power", "Aircraft.NormalizedPower", row, 4, lambda x: f"{x:.2f}")
+        row += 1
+        self.add_readonly_var(systems_frame, "Yaw Damper", "Aircraft.YawDamperEnabled", row, 0, lambda x: "ON" if x > 0.5 else "OFF")
+        self.add_readonly_var(systems_frame, "Auto Pitch Trim", "Aircraft.AutoPitchTrim", row, 2, lambda x: "ON" if x > 0.5 else "OFF")
+        self.add_readonly_var(systems_frame, "Rudder Pedals Disc.", "Aircraft.RudderPedalsDisconnected", row, 4, lambda x: "ON" if x > 0.5 else "OFF")
+        
+        # Trim Systems frame (NEW)
+        trim_frame = ttk.LabelFrame(scrollable_frame, text="Trim Systems", padding="5")
+        trim_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        row = 0
+        self.add_readonly_var(trim_frame, "Pitch Trim", "Aircraft.PitchTrim", row, 0, lambda x: f"{x:.3f}")
+        self.add_readonly_var(trim_frame, "Rudder Trim", "Aircraft.RudderTrim", row, 2, lambda x: f"{x:.3f}")
+        self.add_readonly_var(trim_frame, "Trim", "Aircraft.Trim", row, 4, lambda x: f"{x:.3f}")
+        row += 1
+        self.add_readonly_var(trim_frame, "Pitch Trim Scaling", "Aircraft.PitchTrimScaling", row, 0, lambda x: f"{x:.3f}")
+        self.add_readonly_var(trim_frame, "Pitch Trim Offset", "Aircraft.PitchTrimOffset", row, 2, lambda x: f"{x:.3f}")
+        
+        # Airport Information frame (NEW)
+        airport_frame = ttk.LabelFrame(scrollable_frame, text="Airport Information", padding="5")
+        airport_frame.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        row = 0
+        self.add_readonly_var(airport_frame, "Nearest Airport ID", "Aircraft.NearestAirportIdentifier", row, 0, lambda x: str(x))
+        self.add_readonly_var(airport_frame, "Nearest Airport", "Aircraft.NearestAirportName", row, 2, lambda x: str(x))
+        row += 1
+        self.add_readonly_var(airport_frame, "Best Airport ID", "Aircraft.BestAirportIdentifier", row, 0, lambda x: str(x))
+        self.add_readonly_var(airport_frame, "Best Airport", "Aircraft.BestAirportName", row, 2, lambda x: str(x))
+        row += 1
+        self.add_readonly_var(airport_frame, "Best Runway ID", "Aircraft.BestRunwayIdentifier", row, 0, lambda x: str(x))
+        self.add_readonly_var(airport_frame, "Best Runway Elevation", "Aircraft.BestRunwayElevation", row, 2, lambda x: f"{x:.1f} m")
         
         # Pack canvas and scrollbar
         canvas.pack(side="left", fill="both", expand=True)
@@ -252,10 +304,30 @@ class AeroflyVariableMonitor:
         self.add_control_var(system_frame, "Gear", "Controls.Gear", 1, 0.0, 1.0, 0.0)
         self.add_control_var(system_frame, "Air Brake", "Controls.AirBrake", 2, 0.0, 1.0, 0.0)
         self.add_control_var(system_frame, "Mixture", "Controls.Mixture", 3, 0.0, 1.0, 1.0)
+        self.add_control_var(system_frame, "Propeller", "Controls.Propeller", 4, 0.0, 1.0, 1.0)
+        self.add_control_var(system_frame, "Left Brake", "Controls.LeftBrake", 5, 0.0, 1.0, 0.0)
+        self.add_control_var(system_frame, "Right Brake", "Controls.RightBrake", 6, 0.0, 1.0, 0.0)
+        
+        # Engine Controls frame (NEW)
+        engine_frame = ttk.LabelFrame(frame, text="Multi-Engine Controls", padding="5")
+        engine_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        # Engine controls for 4 engines
+        for i in range(1, 5):
+            row_pos = (i - 1) * 2  # Each engine gets 2 rows (throttle + mixture)
+            self.add_control_var(engine_frame, f"Throttle {i}", f"Controls.Throttle{i}", row_pos, 0.0, 1.0, 0.0)
+            self.add_control_var(engine_frame, f"Mixture {i}", f"Controls.Mixture{i}", row_pos + 1, 0.0, 1.0, 1.0)
+        
+        # Trim Controls frame (NEW)
+        trim_frame = ttk.LabelFrame(frame, text="Trim Controls", padding="5")
+        trim_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        self.add_control_var(trim_frame, "Pitch Trim", "Controls.PitchTrim", 0, -1.0, 1.0, 0.0)
+        self.add_control_var(trim_frame, "Rudder Trim", "Controls.RudderTrim", 1, -1.0, 1.0, 0.0)
         
         # Preset buttons frame
         preset_frame = ttk.LabelFrame(frame, text="Quick Presets", padding="5")
-        preset_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        preset_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
         
         # Flaps presets
         ttk.Label(preset_frame, text="Flaps:").grid(row=0, column=0, padx=5)
@@ -304,11 +376,44 @@ class AeroflyVariableMonitor:
         self.add_control_var(nav_frame, "NAV1 Frequency", "Navigation.NAV1Frequency", 0, 108000000, 118000000, 110500000)
         self.add_control_var(nav_frame, "NAV1 Standby", "Navigation.NAV1StandbyFrequency", 1, 108000000, 118000000, 111000000)
         self.add_control_var(nav_frame, "NAV1 Course", "Navigation.SelectedCourse1", 2, 0, 360, 90)
-        self.add_control_var(nav_frame, "NAV2 Course", "Navigation.SelectedCourse2", 3, 0, 360, 270)
+        self.add_control_var(nav_frame, "NAV2 Frequency", "Navigation.NAV2Frequency", 3, 108000000, 118000000, 110700000)
+        self.add_control_var(nav_frame, "NAV2 Standby", "Navigation.NAV2StandbyFrequency", 4, 108000000, 118000000, 111200000)
+        self.add_control_var(nav_frame, "NAV2 Course", "Navigation.SelectedCourse2", 5, 0, 360, 270)
+        
+        # ILS frame (NEW)
+        ils_frame = ttk.LabelFrame(scrollable_frame, text="ILS System", padding="5")
+        ils_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        self.add_control_var(ils_frame, "ILS1 Frequency", "Navigation.ILS1Frequency", 0, 108000000, 112000000, 110500000)
+        self.add_control_var(ils_frame, "ILS1 Standby", "Navigation.ILS1StandbyFrequency", 1, 108000000, 112000000, 109500000)
+        self.add_control_var(ils_frame, "ILS1 Course", "Navigation.ILS1Course", 2, 0, 360, 90)
+        self.add_control_var(ils_frame, "ILS2 Frequency", "Navigation.ILS2Frequency", 3, 108000000, 112000000, 110700000)
+        self.add_control_var(ils_frame, "ILS2 Standby", "Navigation.ILS2StandbyFrequency", 4, 108000000, 112000000, 109700000)
+        self.add_control_var(ils_frame, "ILS2 Course", "Navigation.ILS2Course", 5, 0, 360, 270)
+        
+        # DME frame (NEW)
+        dme_frame = ttk.LabelFrame(scrollable_frame, text="DME System", padding="5")
+        dme_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        self.add_readonly_var(dme_frame, "DME1 Distance", "Navigation.DME1Distance", 0, 0, lambda x: f"{x:.2f} nm")
+        self.add_readonly_var(dme_frame, "DME1 Time", "Navigation.DME1Time", 0, 2, lambda x: f"{x:.1f} min")
+        self.add_readonly_var(dme_frame, "DME1 Speed", "Navigation.DME1Speed", 0, 4, lambda x: f"{x:.1f} kt")
+        self.add_readonly_var(dme_frame, "DME2 Distance", "Navigation.DME2Distance", 1, 0, lambda x: f"{x:.2f} nm")
+        self.add_readonly_var(dme_frame, "DME2 Time", "Navigation.DME2Time", 1, 2, lambda x: f"{x:.1f} min")
+        self.add_readonly_var(dme_frame, "DME2 Speed", "Navigation.DME2Speed", 1, 4, lambda x: f"{x:.1f} kt")
+        
+        # ADF frame (NEW)
+        adf_frame = ttk.LabelFrame(scrollable_frame, text="ADF System", padding="5")
+        adf_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        self.add_control_var(adf_frame, "ADF1 Frequency", "Navigation.ADF1Frequency", 0, 190000, 1750000, 500000)
+        self.add_control_var(adf_frame, "ADF1 Standby", "Navigation.ADF1StandbyFrequency", 1, 190000, 1750000, 600000)
+        self.add_control_var(adf_frame, "ADF2 Frequency", "Navigation.ADF2Frequency", 2, 190000, 1750000, 700000)
+        self.add_control_var(adf_frame, "ADF2 Standby", "Navigation.ADF2StandbyFrequency", 3, 190000, 1750000, 800000)
         
         # Transponder frame
         xpdr_frame = ttk.LabelFrame(scrollable_frame, text="Transponder", padding="5")
-        xpdr_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        xpdr_frame.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
         
         self.add_control_var(xpdr_frame, "Transponder Code", "Communication.TransponderCode", 0, 0, 7777, 1200)
         
@@ -328,9 +433,15 @@ class AeroflyVariableMonitor:
         row = 0
         self.add_readonly_var(status_frame, "AP Engaged", "Autopilot.Engaged", row, 0, lambda x: "ON" if x > 0.5 else "OFF")
         self.add_readonly_var(status_frame, "AP Type", "Autopilot.Type", row, 2, lambda x: str(x))
+        self.add_readonly_var(status_frame, "Use Mach Number", "Autopilot.UseMachNumber", row, 4, lambda x: "YES" if x > 0.5 else "NO")
         row += 1
         self.add_readonly_var(status_frame, "Active Lateral Mode", "Autopilot.ActiveLateralMode", row, 0, lambda x: str(x))
         self.add_readonly_var(status_frame, "Active Vertical Mode", "Autopilot.ActiveVerticalMode", row, 2, lambda x: str(x))
+        self.add_readonly_var(status_frame, "Speed Managed", "Autopilot.SpeedManaged", row, 4, lambda x: "YES" if x > 0.5 else "NO")
+        row += 1
+        self.add_readonly_var(status_frame, "Armed Lateral Mode", "Autopilot.ArmedLateralMode", row, 0, lambda x: str(x))
+        self.add_readonly_var(status_frame, "Armed Vertical Mode", "Autopilot.ArmedVerticalMode", row, 2, lambda x: str(x))
+        self.add_readonly_var(status_frame, "Armed Approach Mode", "Autopilot.ArmedApproachMode", row, 4, lambda x: str(x))
         
         # AP Controls frame
         controls_frame = ttk.LabelFrame(frame, text="Autopilot Controls", padding="5")
@@ -340,6 +451,36 @@ class AeroflyVariableMonitor:
         self.add_control_var(controls_frame, "Selected Heading", "Autopilot.SelectedHeading", 1, 0, 360, 90)
         self.add_control_var(controls_frame, "Selected Altitude", "Autopilot.SelectedAltitude", 2, 0, 15000, 1000)
         self.add_control_var(controls_frame, "Selected VS", "Autopilot.SelectedVerticalSpeed", 3, -20, 20, 0)
+        self.add_control_var(controls_frame, "Selected Speed", "Autopilot.SelectedSpeed", 4, 20, 150, 50)
+        
+        # AutoThrottle frame (NEW)
+        at_frame = ttk.LabelFrame(frame, text="AutoThrottle System", padding="5")
+        at_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        row = 0
+        self.add_readonly_var(at_frame, "AT Engaged", "Autopilot.ThrottleEngaged", row, 0, lambda x: "ON" if x > 0.5 else "OFF")
+        self.add_readonly_var(at_frame, "AT Type", "AutoThrottle.Type", row, 2, lambda x: str(x))
+        self.add_readonly_var(at_frame, "AT Command", "Autopilot.ThrottleCommand", row, 4, lambda x: f"{x:.3f}")
+        row += 1
+        self.add_readonly_var(at_frame, "Active AT Mode", "Autopilot.ActiveAutoThrottleMode", row, 0, lambda x: str(x))
+        self.add_readonly_var(at_frame, "Target Airspeed", "Autopilot.TargetAirspeed", row, 2, lambda x: f"{x:.1f} m/s")
+        
+        # AP Command Outputs (NEW)
+        output_frame = ttk.LabelFrame(frame, text="Autopilot Outputs", padding="5")
+        output_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        row = 0
+        self.add_readonly_var(output_frame, "Aileron Command", "Autopilot.Aileron", row, 0, lambda x: f"{x:.3f}")
+        self.add_readonly_var(output_frame, "Elevator Command", "Autopilot.Elevator", row, 2, lambda x: f"{x:.3f}")
+        self.add_readonly_var(output_frame, "Altitude Scale", "Autopilot.SelectedAltitudeScale", row, 4, lambda x: f"{x:.0f}")
+        
+        # Helicopter AP (NEW)
+        heli_frame = ttk.LabelFrame(frame, text="Helicopter Autopilot", padding="5")
+        heli_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        row = 0
+        self.add_readonly_var(heli_frame, "Active Collective Mode", "Autopilot.ActiveCollectiveMode", row, 0, lambda x: str(x))
+        self.add_readonly_var(heli_frame, "Armed Collective Mode", "Autopilot.ArmedCollectiveMode", row, 2, lambda x: str(x))
         
     def create_performance_tab(self):
         """Create Performance speeds tab"""
@@ -479,29 +620,184 @@ class AeroflyVariableMonitor:
         self.add_readonly_var(status_frame, "Warning Mute", "Warnings.WarningMute", row, 2, 
                             lambda x: "🔇 MUTED" if x > 0.5 else "Normal")
         
+    def create_configuration_tab(self):
+        """Create Configuration tab for aircraft configuration settings"""
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="Configuration")
+        
+        # Configuration frame
+        config_frame = ttk.LabelFrame(frame, text="Aircraft Configuration", padding="5")
+        config_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        self.add_control_var(config_frame, "Takeoff Flaps", "Configuration.SelectedTakeOffFlaps", 0, 0.0, 1.0, 0.25)
+        self.add_control_var(config_frame, "Landing Flaps", "Configuration.SelectedLandingFlaps", 1, 0.0, 1.0, 0.75)
+        
+    def create_fms_tab(self):
+        """Create Flight Management System tab"""
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="FMS")
+        
+        # FMS frame
+        fms_frame = ttk.LabelFrame(frame, text="Flight Management System", padding="5")
+        fms_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        self.add_control_var(fms_frame, "Flight Number", "FlightManagementSystem.FlightNumber", 0, 0, 9999, 100)
+        
+    def create_flight_director_tab(self):
+        """Create Flight Director tab"""
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="Flight Director")
+        
+        # Flight Director frame
+        fd_frame = ttk.LabelFrame(frame, text="Flight Director Commands", padding="5")
+        fd_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        row = 0
+        self.add_readonly_var(fd_frame, "FD Pitch", "FlightDirector.Pitch", row, 0, lambda x: f"{x:.2f}°")
+        self.add_readonly_var(fd_frame, "FD Bank", "FlightDirector.Bank", row, 2, lambda x: f"{x:.2f}°")
+        self.add_readonly_var(fd_frame, "FD Yaw", "FlightDirector.Yaw", row, 4, lambda x: f"{x:.2f}°")
+        
+    def create_copilot_tab(self):
+        """Create Copilot tab"""
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="Copilot")
+        
+        # Copilot frame
+        copilot_frame = ttk.LabelFrame(frame, text="Copilot Settings", padding="5")
+        copilot_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        row = 0
+        self.add_readonly_var(copilot_frame, "Copilot Heading", "Copilot.Heading", row, 0, lambda x: f"{x:.1f}°")
+        self.add_readonly_var(copilot_frame, "Copilot Altitude", "Copilot.Altitude", row, 2, lambda x: f"{x:.0f} m")
+        self.add_readonly_var(copilot_frame, "Copilot Airspeed", "Copilot.Airspeed", row, 4, lambda x: f"{x:.1f} m/s")
+        row += 1
+        self.add_readonly_var(copilot_frame, "Copilot VS", "Copilot.VerticalSpeed", row, 0, lambda x: f"{x:.1f} m/s")
+        self.add_readonly_var(copilot_frame, "Copilot Aileron", "Copilot.Aileron", row, 2, lambda x: f"{x:.3f}")
+        self.add_readonly_var(copilot_frame, "Copilot Elevator", "Copilot.Elevator", row, 4, lambda x: f"{x:.3f}")
+        row += 1
+        self.add_readonly_var(copilot_frame, "Copilot Throttle", "Copilot.Throttle", row, 0, lambda x: f"{x:.3f}")
+        self.add_readonly_var(copilot_frame, "Auto Rudder", "Copilot.AutoRudder", row, 2, lambda x: "ON" if x > 0.5 else "OFF")
+        
+    def create_pressurization_tab(self):
+        """Create Pressurization tab"""
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="Pressurization")
+        
+        # Pressurization frame
+        press_frame = ttk.LabelFrame(frame, text="Cabin Pressurization", padding="5")
+        press_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        self.add_control_var(press_frame, "Landing Elevation", "Pressurization.LandingElevation", 0, 0, 5000, 0)
+        self.add_control_var(press_frame, "Landing Elevation Manual", "Pressurization.LandingElevationManual", 1, 0, 5000, 0)
+        
+    def create_view_controls_tab(self):
+        """Create View Controls tab"""
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="View Controls")
+        
+        # Create scrollable frame
+        canvas = tk.Canvas(frame)
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # View Status frame
+        status_frame = ttk.LabelFrame(scrollable_frame, text="View Status", padding="5")
+        status_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        row = 0
+        self.add_readonly_var(status_frame, "Display Name", "View.DisplayName", row, 0, lambda x: str(x))
+        self.add_readonly_var(status_frame, "Category", "View.Category", row, 2, lambda x: f"{x:.0f}")
+        self.add_readonly_var(status_frame, "Mode", "View.Mode", row, 4, lambda x: f"{x:.0f}")
+        
+        # View Controls frame
+        controls_frame = ttk.LabelFrame(scrollable_frame, text="View Controls", padding="5")
+        controls_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        self.add_control_var(controls_frame, "View Zoom", "View.Zoom", 0, 0.1, 5.0, 1.0)
+        self.add_control_var(controls_frame, "Pan Horizontal", "View.Pan.Horizontal", 1, -180, 180, 0)
+        self.add_control_var(controls_frame, "Pan Vertical", "View.Pan.Vertical", 2, -90, 90, 0)
+        self.add_control_var(controls_frame, "Look Horizontal", "View.Look.Horizontal", 3, -1, 1, 0)
+        self.add_control_var(controls_frame, "Look Vertical", "View.Look.Vertical", 4, -1, 1, 0)
+        
+        # View Offsets frame
+        offset_frame = ttk.LabelFrame(scrollable_frame, text="View Offsets", padding="5")
+        offset_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        self.add_control_var(offset_frame, "Offset X", "View.OffsetX", 0, -10, 10, 0)
+        self.add_control_var(offset_frame, "Offset Y", "View.OffsetY", 1, -10, 10, 0)
+        self.add_control_var(offset_frame, "Offset Z", "View.OffsetZ", 2, -10, 10, 0)
+        self.add_control_var(offset_frame, "Field of View", "View.FieldOfView", 3, 10, 120, 75)
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+    def create_simulation_tab(self):
+        """Create Simulation Controls tab"""
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="Simulation")
+        
+        # Simulation Controls frame
+        sim_frame = ttk.LabelFrame(frame, text="Simulation Controls", padding="5")
+        sim_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        # Control buttons frame
+        buttons_frame = ttk.Frame(sim_frame)
+        buttons_frame.grid(row=0, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=5)
+        
+        ttk.Button(buttons_frame, text="Pause", command=lambda: self.send_command("Simulation.Pause", 1.0)).grid(row=0, column=0, padx=5)
+        ttk.Button(buttons_frame, text="Resume", command=lambda: self.send_command("Simulation.Pause", 0.0)).grid(row=0, column=1, padx=5)
+        ttk.Button(buttons_frame, text="Lift Up", command=lambda: self.send_command("Simulation.LiftUp", 1.0)).grid(row=0, column=2, padx=5)
+        ttk.Button(buttons_frame, text="Sound Toggle", command=lambda: self.send_command("Simulation.Sound", 1.0)).grid(row=0, column=3, padx=5)
+        
+        # Time and Environment frame
+        time_frame = ttk.LabelFrame(frame, text="Time & Environment", padding="5")
+        time_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        self.add_control_var(time_frame, "Simulation Time", "Simulation.Time", 0, 0, 86400, 43200)
+        self.add_control_var(time_frame, "Visibility", "Simulation.Visibility", 1, 0, 50000, 10000)
+        self.add_control_var(time_frame, "Use Mouse Control", "Simulation.UseMouseControl", 2, 0, 1, 1)
+        
     def create_systems_tab(self):
-        """Create Systems tab - placeholder for future implementation"""
+        """Create Systems tab with additional systems"""
         frame = ttk.Frame(self.notebook)
         self.notebook.add(frame, text="Systems")
         
-        # Note frame
-        note_frame = ttk.LabelFrame(frame, text="Systems Information", padding="5")
-        note_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
+        # Additional Systems frame
+        systems_frame = ttk.LabelFrame(frame, text="Additional Systems", padding="5")
+        systems_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
         
-        ttk.Label(note_frame, text="System variables will be added as they become available in the SDK", 
+        row = 0
+        self.add_readonly_var(systems_frame, "Throttle Limit", "Aircraft.ThrottleLimit", row, 0, lambda x: f"{x:.2f}")
+        self.add_readonly_var(systems_frame, "Reverse Thrust", "Aircraft.Reverse", row, 2, lambda x: "ON" if x > 0.5 else "OFF")
+        row += 1
+        
+        # Note frame
+        note_frame = ttk.LabelFrame(frame, text="Information", padding="5")
+        note_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        ttk.Label(note_frame, text="All 339 SDK variables are now available across all tabs", 
                  font=('Arial', 12)).pack(pady=20)
         
     def create_all_variables_tab(self):
-        """Create tab showing all 285 variables in 6 columns"""
+        """Create tab showing all 339 variables in 6 columns"""
         frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text="All Variables")
+        self.notebook.add(frame, text="All Variables (339)")
         
         # Info frame
         info_frame = ttk.Frame(frame)
         info_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
         
-        ttk.Label(info_frame, text="All 266 Variables Array - Real-time Values").grid(row=0, column=0, padx=5)
-        self.var_count_label = ttk.Label(info_frame, text="Variables: 0/266", foreground="blue")
+        ttk.Label(info_frame, text="All 339 Variables Array - Real-time Values (Complete SDK)").grid(row=0, column=0, padx=5)
+        self.var_count_label = ttk.Label(info_frame, text="Variables: 0/339", foreground="blue")
         self.var_count_label.grid(row=0, column=1, padx=20)
         
         # Create Treeview with 6 columns
@@ -534,16 +830,16 @@ class AeroflyVariableMonitor:
         self.tree_frame.columnconfigure(0, weight=1)
         self.tree_frame.rowconfigure(0, weight=1)
         
-        # Populate initial tree structure (45 rows x 6 columns = 270 variables, showing 266)
+        # Populate initial tree structure (57 rows x 6 columns = 342 slots, showing 339)
         self.tree_items = []
-        for row in range(45):
+        for row in range(57):
             item = self.variables_tree.insert('', 'end', values=['---'] * 12)
             self.tree_items.append(item)
         
     def connect(self):
         """Connect to Aerofly shared memory"""
         try:
-            self.shared_memory = mmap.mmap(-1, 2800, "AeroflyBridgeData")
+            self.shared_memory = mmap.mmap(-1, 3384, "AeroflyBridgeData")
             
             # Test connection
             self.shared_memory.seek(8)  # data_valid offset
@@ -606,7 +902,7 @@ class AeroflyVariableMonitor:
         last_update = time.time()
         update_count = 0
         
-        # CORRECTED Variable offsets based on AeroflyBridgeData structure
+        # COMPLETE Variable offsets for ALL 339 Variables (Updated for 3384 bytes)
         offsets = {
             # === HEADER (16 bytes) ===
             'timestamp_us': 0,
@@ -614,22 +910,22 @@ class AeroflyVariableMonitor:
             'update_counter': 12,
             
             # === AIRCRAFT BASIC (64 bytes starting at 16) ===
-            'Aircraft.Latitude': 16,                    # double latitude
-            'Aircraft.Longitude': 24,                   # double longitude
-            'Aircraft.Altitude': 32,                    # double altitude
-            'Aircraft.Pitch': 40,                       # double pitch
-            'Aircraft.Bank': 48,                        # double bank
-            'Aircraft.TrueHeading': 56,                 # double true_heading
-            'Aircraft.MagneticHeading': 64,             # double magnetic_heading
-            'Aircraft.IndicatedAirspeed': 72,           # double indicated_airspeed
+            'Aircraft.Latitude': 16,                    
+            'Aircraft.Longitude': 24,                   
+            'Aircraft.Altitude': 32,                    
+            'Aircraft.Pitch': 40,                       
+            'Aircraft.Bank': 48,                        
+            'Aircraft.TrueHeading': 56,                 
+            'Aircraft.MagneticHeading': 64,             
+            'Aircraft.IndicatedAirspeed': 72,           
             
             # === AIRCRAFT PHYSICS (96 bytes starting at 80) ===
-            'Aircraft.GroundSpeed': 80,                 # double ground_speed
-            'Aircraft.VerticalSpeed': 88,               # double vertical_speed
-            'Aircraft.AngleOfAttack': 96,               # double angle_of_attack
-            'Aircraft.AngleOfAttackLimit': 104,         # double angle_of_attack_limit
-            'Aircraft.MachNumber': 112,                 # double mach_number
-            'Aircraft.RateOfTurn': 120,                 # double rate_of_turn
+            'Aircraft.GroundSpeed': 80,                 
+            'Aircraft.VerticalSpeed': 88,               
+            'Aircraft.AngleOfAttack': 96,               
+            'Aircraft.AngleOfAttackLimit': 104,         
+            'Aircraft.MachNumber': 112,                 
+            'Aircraft.RateOfTurn': 120,                 
             'Aircraft.Position': 128,                   # tm_vector3d position (24 bytes)
             'Aircraft.Velocity': 152,                   # tm_vector3d velocity (24 bytes)
             'Aircraft.Acceleration': 176,               # tm_vector3d acceleration (24 bytes)
@@ -637,99 +933,215 @@ class AeroflyVariableMonitor:
             'Aircraft.Wind': 224,                       # tm_vector3d wind (24 bytes)
             'Aircraft.Gravity': 248,                    # tm_vector3d gravity (24 bytes)
             
-            # === AIRCRAFT STATE (64 bytes starting at 272) ===
-            'Aircraft.OnGround': 272,                   # double on_ground
-            'Aircraft.OnRunway': 280,                   # double on_runway
-            'Aircraft.Crashed': 288,                    # double crashed
-            'Aircraft.Gear': 296,                       # double gear_position
-            'Aircraft.Flaps': 304,                      # double flaps_position
-            'Aircraft.Slats': 312,                      # double slats_position
-            'Aircraft.Throttle': 320,                   # double throttle_position
-            'Aircraft.AirBrake': 328,                   # double airbrake_position
+            # === ALL VARIABLES ARRAY (2712 bytes starting at 672) - Complete 339 Variables ===
+            'all_variables_base': 672,
             
-            # === ENGINE DATA (32 bytes starting at 336) ===
-            'Aircraft.EngineThrottle1': 336,            # double engine_throttle[0]
-            'Aircraft.EngineThrottle2': 344,            # double engine_throttle[1]
-            'Aircraft.EngineThrottle3': 352,            # double engine_throttle[2]
-            'Aircraft.EngineThrottle4': 360,            # double engine_throttle[3]
-            'Aircraft.EngineRotationSpeed1': 368,       # double engine_rotation_speed[0]
-            'Aircraft.EngineRotationSpeed2': 376,       # double engine_rotation_speed[1]
-            'Aircraft.EngineRotationSpeed3': 384,       # double engine_rotation_speed[2]
-            'Aircraft.EngineRotationSpeed4': 392,       # double engine_rotation_speed[3]
-            'Aircraft.EngineRunning1': 400,             # double engine_running[0]
-            'Aircraft.EngineRunning2': 408,             # double engine_running[1]
-            'Aircraft.EngineRunning3': 416,             # double engine_running[2]
-            'Aircraft.EngineRunning4': 424,             # double engine_running[3]
+            # === AIRCRAFT VARIABLES (Indices 0-94) ===
+            'Aircraft.UniversalTime': 672 + (0 * 8),
+            'Aircraft.IndicatedAirspeedTrend': 672 + (1 * 8),
+            'Aircraft.Height': 672 + (2 * 8),
+            'Aircraft.Name': 672 + (3 * 8),
+            'Aircraft.RadarAltitude': 672 + (4 * 8),
+            'Aircraft.Power': 672 + (5 * 8),
+            'Aircraft.NormalizedPower': 672 + (6 * 8),
+            'Aircraft.YawDamperEnabled': 672 + (7 * 8),
+            'Aircraft.AutoPitchTrim': 672 + (8 * 8),
+            'Aircraft.RudderPedalsDisconnected': 672 + (9 * 8),
+            'Aircraft.PitchTrim': 672 + (10 * 8),
+            'Aircraft.RudderTrim': 672 + (11 * 8),
+            'Aircraft.Trim': 672 + (12 * 8),
+            'Aircraft.PitchTrimScaling': 672 + (13 * 8),
+            'Aircraft.PitchTrimOffset': 672 + (14 * 8),
+            'Aircraft.NearestAirportIdentifier': 672 + (15 * 8),
+            'Aircraft.NearestAirportName': 672 + (16 * 8),
+            'Aircraft.BestAirportIdentifier': 672 + (17 * 8),
+            'Aircraft.BestAirportName': 672 + (18 * 8),
+            'Aircraft.BestRunwayIdentifier': 672 + (19 * 8),
+            'Aircraft.BestRunwayElevation': 672 + (20 * 8),
+            'Aircraft.Category.Jet': 672 + (21 * 8),
+            'Aircraft.Category.Glider': 672 + (22 * 8),
+            'Aircraft.OnRunway': 672 + (23 * 8),
+            'Aircraft.Crashed': 672 + (24 * 8),
+            'Aircraft.ParkingBrake': 672 + (25 * 8),
+            'Aircraft.EngineMaster1': 672 + (26 * 8),
+            'Aircraft.EngineMaster2': 672 + (27 * 8),
+            'Aircraft.EngineMaster3': 672 + (28 * 8),
+            'Aircraft.Starter1': 672 + (29 * 8),
+            'Aircraft.Ignition1': 672 + (30 * 8),
+            'Aircraft.APUAvailable': 672 + (31 * 8),
+            'Aircraft.ThrottleLimit': 672 + (32 * 8),
+            'Aircraft.Reverse': 672 + (33 * 8),
             
-            # === CONTROLS INPUT (24 bytes starting at 432) ===
-            'Controls.Pitch.Input': 432,                # double pitch_input
-            'Controls.Roll.Input': 440,                 # double roll_input
-            'Controls.Yaw.Input': 448,                  # double yaw_input
+            # === PERFORMANCE SPEEDS (Indices 95-104) ===
+            'Performance.Speed.VS0': 672 + (95 * 8),
+            'Performance.Speed.VS1': 672 + (96 * 8),
+            'Performance.Speed.VFE': 672 + (97 * 8),
+            'Performance.Speed.VNO': 672 + (98 * 8),
+            'Performance.Speed.VNE': 672 + (99 * 8),
+            'Performance.Speed.VAPP': 672 + (100 * 8),
+            'Performance.Speed.Minimum': 672 + (101 * 8),
+            'Performance.Speed.Maximum': 672 + (102 * 8),
             
-            # === NAVIGATION FREQUENCIES (80 bytes starting at 456) ===
-            'Communication.COM1Frequency': 456,         # double com1_frequency
-            'Communication.COM1StandbyFrequency': 464,  # double com1_standby_frequency
-            'Communication.COM2Frequency': 472,         # double com2_frequency
-            'Communication.COM2StandbyFrequency': 480,  # double com2_standby_frequency
-            'Navigation.NAV1Frequency': 488,            # double nav1_frequency
-            'Navigation.NAV1StandbyFrequency': 496,     # double nav1_standby_frequency
-            'Navigation.SelectedCourse1': 504,          # double nav1_selected_course
-            'Navigation.NAV2Frequency': 512,            # double nav2_frequency
-            'Navigation.NAV2StandbyFrequency': 520,     # double nav2_standby_frequency
-            'Navigation.SelectedCourse2': 528,          # double nav2_selected_course
+            # === CONFIGURATION (Indices 105-106) ===
+            'Configuration.SelectedTakeOffFlaps': 672 + (105 * 8),
+            'Configuration.SelectedLandingFlaps': 672 + (106 * 8),
             
-            # === AUTOPILOT (64 bytes starting at 536) ===
-            'Autopilot.Engaged': 536,                   # double ap_engaged
-            'Autopilot.SelectedAirspeed': 544,          # double ap_selected_airspeed
-            'Autopilot.SelectedHeading': 552,           # double ap_selected_heading
-            'Autopilot.SelectedAltitude': 560,          # double ap_selected_altitude
-            'Autopilot.SelectedVerticalSpeed': 568,     # double ap_selected_vs
-            'Autopilot.ThrottleEngaged': 576,           # double ap_throttle_engaged
-            'Autopilot.ActiveLateralMode': 584,         # char ap_lateral_mode[16]
-            'Autopilot.ActiveVerticalMode': 600,        # char ap_vertical_mode[16]
+            # === FLIGHT MANAGEMENT SYSTEM (Index 107) ===
+            'FlightManagementSystem.FlightNumber': 672 + (107 * 8),
             
-            # === PERFORMANCE SPEEDS (40 bytes starting at 616) ===
-            'Performance.Speed.VS0': 616,               # double vs0_speed
-            'Performance.Speed.VS1': 624,               # double vs1_speed
-            'Performance.Speed.VFE': 632,               # double vfe_speed
-            'Performance.Speed.VNO': 640,               # double vno_speed
-            'Performance.Speed.VNE': 648,               # double vne_speed
+            # === NAVIGATION (Indices 108-141) ===
+            'Navigation.NAV2Frequency': 672 + (108 * 8),
+            'Navigation.NAV2StandbyFrequency': 672 + (109 * 8),
+            'Navigation.ILS1Frequency': 672 + (110 * 8),
+            'Navigation.ILS1StandbyFrequency': 672 + (111 * 8),
+            'Navigation.ILS1Course': 672 + (112 * 8),
+            'Navigation.ILS2Frequency': 672 + (113 * 8),
+            'Navigation.ILS2StandbyFrequency': 672 + (114 * 8),
+            'Navigation.ILS2Course': 672 + (115 * 8),
+            'Navigation.DME1Distance': 672 + (116 * 8),
+            'Navigation.DME1Time': 672 + (117 * 8),
+            'Navigation.DME1Speed': 672 + (118 * 8),
+            'Navigation.DME2Distance': 672 + (119 * 8),
+            'Navigation.DME2Time': 672 + (120 * 8),
+            'Navigation.DME2Speed': 672 + (121 * 8),
+            'Navigation.ADF1Frequency': 672 + (122 * 8),
+            'Navigation.ADF1StandbyFrequency': 672 + (123 * 8),
+            'Navigation.ADF2Frequency': 672 + (124 * 8),
+            'Navigation.ADF2StandbyFrequency': 672 + (125 * 8),
+            'Communication.TransponderCode': 672 + (126 * 8),
             
-            # === WARNINGS (16 bytes starting at 656) ===
-            'Warnings.MasterWarning': 660,              # uint32_t master_warning
-            'Warnings.MasterCaution': 664,              # uint32_t master_caution
+            # === COMMUNICATION (Indices 142-152) ===
+            # Communication frequencies mapped in fixed structure section
             
-            # === ALL VARIABLES ARRAY (2280 bytes starting at 672) ===
-            'all_variables_base': 672,                  # double all_variables[285]
+            # === AUTOPILOT (Indices 153-180) ===
+            'Autopilot.Type': 672 + (153 * 8),
+            'Autopilot.UseMachNumber': 672 + (154 * 8),
+            'Autopilot.SpeedManaged': 672 + (155 * 8),
+            'Autopilot.ArmedLateralMode': 672 + (156 * 8),
+            'Autopilot.ArmedVerticalMode': 672 + (157 * 8),
+            'Autopilot.ArmedApproachMode': 672 + (158 * 8),
+            'Autopilot.SelectedSpeed': 672 + (159 * 8),
+            'AutoThrottle.Type': 672 + (160 * 8),
+            'Autopilot.ThrottleCommand': 672 + (161 * 8),
+            'Autopilot.ActiveAutoThrottleMode': 672 + (162 * 8),
+            'Autopilot.TargetAirspeed': 672 + (163 * 8),
+            'Autopilot.Aileron': 672 + (164 * 8),
+            'Autopilot.Elevator': 672 + (165 * 8),
+            'Autopilot.SelectedAltitudeScale': 672 + (166 * 8),
+            'Autopilot.ActiveCollectiveMode': 672 + (167 * 8),
+            'Autopilot.ArmedCollectiveMode': 672 + (168 * 8),
             
-            # Additional SDK variables (based on corrected MESSAGE_LIST and VariableIndex)
-            'Aircraft.UniversalTime': 672,              # all_variables[0]
-            'Aircraft.IndicatedAirspeedTrend': 680,     # all_variables[1]
-            'Aircraft.Height': 688,                     # all_variables[2]
+            # === FLIGHT DIRECTOR (Indices 181-183) ===
+            'FlightDirector.Pitch': 672 + (181 * 8),
+            'FlightDirector.Bank': 672 + (182 * 8),
+            'FlightDirector.Yaw': 672 + (183 * 8),
             
-            # === AIRCRAFT STATE VARIABLES (corrected offsets) ===
-            'Aircraft.OnRunway': 672 + (53 * 8),       # all_variables[53] = 1096
-            'Aircraft.Crashed': 672 + (54 * 8),        # all_variables[54] = 1104
-            'Aircraft.ParkingBrake': 672 + (32 * 8),   # all_variables[32] = 928
+            # === COPILOT (Indices 184-193) ===
+            'Copilot.Heading': 672 + (184 * 8),
+            'Copilot.Altitude': 672 + (185 * 8),
+            'Copilot.Airspeed': 672 + (186 * 8),
+            'Copilot.VerticalSpeed': 672 + (187 * 8),
+            'Copilot.Aileron': 672 + (188 * 8),
+            'Copilot.Elevator': 672 + (189 * 8),
+            'Copilot.Throttle': 672 + (190 * 8),
+            'Copilot.AutoRudder': 672 + (191 * 8),
             
-            # === ENGINE SYSTEM VARIABLES ===
-            'Aircraft.EngineMaster1': 672 + (78 * 8),  # all_variables[78] = 1296
-            'Aircraft.EngineMaster2': 672 + (79 * 8),  # all_variables[79] = 1304
-            'Aircraft.EngineMaster3': 672 + (80 * 8),  # all_variables[80] = 1312
-            'Aircraft.Starter1': 672 + (67 * 8),       # all_variables[67] = 1208
-            'Aircraft.Ignition1': 672 + (72 * 8),      # all_variables[72] = 1248
-            'Aircraft.APUAvailable': 672 + (94 * 8),   # all_variables[94] = 1424
-            'Performance.Speed.VAPP': 752,              # all_variables[10]
-            'Performance.Speed.Minimum': 760,           # all_variables[11]
-            'Performance.Speed.Maximum': 768,           # all_variables[12]
-            'Communication.TransponderCode': 776,       # all_variables[13]
-            'Autopilot.Type': 784,                      # all_variables[14]
-            'Warnings.EngineFire': 792,                 # all_variables[15]
-            'Warnings.LowOilPressure': 800,             # all_variables[16]
-            'Warnings.LowFuelPressure': 808,            # all_variables[17]
-            'Warnings.AltitudeAlert': 816,              # all_variables[18]
-            'Warnings.WarningActive': 824,              # all_variables[19]
-            'Warnings.WarningMute': 832,                # all_variables[20]
+            # === CONTROLS (Indices 192-260) - CORRECTED ===
+            'Controls.Throttle': 672 + (192 * 8),       # CONTROLS_THROTTLE = 192
+            'Controls.Throttle1': 672 + (193 * 8),      # CONTROLS_THROTTLE_1 = 193
+            'Controls.Throttle2': 672 + (194 * 8),      # CONTROLS_THROTTLE_2 = 194
+            'Controls.Throttle3': 672 + (195 * 8),      # CONTROLS_THROTTLE_3 = 195
+            'Controls.Throttle4': 672 + (196 * 8),      # CONTROLS_THROTTLE_4 = 196
+            'Controls.Pitch.Input': 672 + (201 * 8),    # CONTROLS_PITCH_INPUT = 201
+            'Controls.Roll.Input': 672 + (203 * 8),     # CONTROLS_ROLL_INPUT = 203  
+            'Controls.Yaw.Input': 672 + (205 * 8),      # CONTROLS_YAW_INPUT = 205
+            'Controls.Flaps': 672 + (207 * 8),          # CONTROLS_FLAPS = 207
+            'Controls.Gear': 672 + (209 * 8),           # CONTROLS_GEAR = 209
+            'Controls.LeftBrake': 672 + (211 * 8),      # CONTROLS_WHEEL_BRAKE_LEFT = 211
+            'Controls.RightBrake': 672 + (212 * 8),     # CONTROLS_WHEEL_BRAKE_RIGHT = 212
+            'Controls.AirBrake': 672 + (215 * 8),       # CONTROLS_AIR_BRAKE = 215
+            'Controls.Propeller': 672 + (219 * 8),      # CONTROLS_PROPELLER_SPEED_1 = 219 (usar como base)
+            'Controls.Mixture': 672 + (223 * 8),        # CONTROLS_MIXTURE = 223
+            'Controls.Mixture1': 672 + (224 * 8),       # CONTROLS_MIXTURE_1 = 224
+            'Controls.Mixture2': 672 + (225 * 8),       # CONTROLS_MIXTURE_2 = 225
+            'Controls.Mixture3': 672 + (226 * 8),       # CONTROLS_MIXTURE_3 = 226
+            'Controls.Mixture4': 672 + (227 * 8),       # CONTROLS_MIXTURE_4 = 227
+            'Controls.PitchTrim': 672 + (243 * 8),      # CONTROLS_AILERON_TRIM = 243 (usar como Pitch)
+            'Controls.RudderTrim': 672 + (244 * 8),     # CONTROLS_RUDDER_TRIM = 244
+            
+            # === PRESSURIZATION (Indices 263-264) ===
+            'Pressurization.LandingElevation': 672 + (263 * 8),
+            'Pressurization.LandingElevationManual': 672 + (264 * 8),
+            
+            # === VIEW CONTROLS (Indices 265-275) ===
+            'View.DisplayName': 672 + (265 * 8),
+            'View.Category': 672 + (266 * 8),
+            'View.Mode': 672 + (267 * 8),
+            'View.Zoom': 672 + (268 * 8),
+            'View.Pan.Horizontal': 672 + (269 * 8),
+            'View.Pan.Vertical': 672 + (270 * 8),
+            'View.Look.Horizontal': 672 + (271 * 8),
+            'View.Look.Vertical': 672 + (272 * 8),
+            'View.OffsetX': 672 + (273 * 8),
+            'View.OffsetY': 672 + (274 * 8),
+            'View.OffsetZ': 672 + (275 * 8),
+            'View.FieldOfView': 672 + (276 * 8),
+            
+            # === SIMULATION CONTROLS (Indices 277-280) ===
+            'Simulation.Pause': 672 + (277 * 8),
+            'Simulation.LiftUp': 672 + (278 * 8),
+            'Simulation.Sound': 672 + (279 * 8),
+            'Simulation.Time': 672 + (280 * 8),
+            'Simulation.Visibility': 672 + (281 * 8),
+            'Simulation.UseMouseControl': 672 + (282 * 8),
+            
+            # === WARNINGS (Indices 283-295) ===
+            'Warnings.MasterWarning': 672 + (283 * 8),
+            'Warnings.MasterCaution': 672 + (284 * 8),
+            'Warnings.EngineFire': 672 + (285 * 8),
+            'Warnings.LowOilPressure': 672 + (286 * 8),
+            'Warnings.LowFuelPressure': 672 + (287 * 8),
+            'Warnings.AltitudeAlert': 672 + (288 * 8),
+            'Warnings.WarningActive': 672 + (289 * 8),
+            'Warnings.WarningMute': 672 + (290 * 8),
+            
+            # === FIXED STRUCTURE VARIABLES (Keep original offsets) ===
+            'Aircraft.OnGround': 272,                   
+            'Aircraft.Gear': 296,                       
+            'Aircraft.Flaps': 304,                      
+            'Aircraft.Slats': 312,                      
+            'Aircraft.Throttle': 320,                   
+            'Aircraft.AirBrake': 328,                   
+            'Aircraft.EngineThrottle1': 336,            
+            'Aircraft.EngineThrottle2': 344,            
+            'Aircraft.EngineThrottle3': 352,            
+            'Aircraft.EngineThrottle4': 360,            
+            'Aircraft.EngineRotationSpeed1': 368,       
+            'Aircraft.EngineRotationSpeed2': 376,       
+            'Aircraft.EngineRotationSpeed3': 384,       
+            'Aircraft.EngineRotationSpeed4': 392,       
+            'Aircraft.EngineRunning1': 400,             
+            'Aircraft.EngineRunning2': 408,             
+            'Aircraft.EngineRunning3': 416,             
+            'Aircraft.EngineRunning4': 424,             
+            'Navigation.NAV1Frequency': 488,            
+            'Navigation.NAV1StandbyFrequency': 496,     
+            'Navigation.SelectedCourse1': 504,          
+            'Navigation.SelectedCourse2': 528,          
+            'Autopilot.Engaged': 536,                   
+            'Autopilot.SelectedAirspeed': 544,          
+            'Autopilot.SelectedHeading': 552,           
+            'Autopilot.SelectedAltitude': 560,          
+            'Autopilot.SelectedVerticalSpeed': 568,     
+            'Autopilot.ThrottleEngaged': 576,           
+            'Autopilot.ActiveLateralMode': 584,         
+            'Autopilot.ActiveVerticalMode': 600,
+            
+            # === COM FREQUENCIES (Fixed structure offsets) ===        
+            'Communication.COM1Frequency': 456,         
+            'Communication.COM1StandbyFrequency': 464,  
+            'Communication.COM2Frequency': 472,         
+            'Communication.COM2StandbyFrequency': 480,  
         }
         
         while self.running:
@@ -783,13 +1195,13 @@ class AeroflyVariableMonitor:
             base_offset = 672  # Start of all_variables array
             valid_count = 0
             
-            # Update tree items (45 rows x 6 columns = 270 slots, showing 266 variables)
-            for row in range(45):
+            # Update tree items (57 rows x 6 columns = 342 slots, showing 339 variables)
+            for row in range(57):
                 values = []
                 
                 for col in range(6):
                     var_index = row * 6 + col
-                    if var_index < 266:
+                    if var_index < 339:
                         try:
                             value = self.read_double(base_offset + var_index * 8)
                             if abs(value) > 1e-10 or value == 0.0:
@@ -805,7 +1217,7 @@ class AeroflyVariableMonitor:
                     self.variables_tree.item(self.tree_items[row], values=values)
             
             # Update count label
-            self.var_count_label.config(text=f"Active Variables: {valid_count}/266")
+            self.var_count_label.config(text=f"Active Variables: {valid_count}/339")
             
         except Exception as e:
             print(f"Error updating variables tree: {e}")
