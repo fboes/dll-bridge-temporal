@@ -2,6 +2,8 @@
 
 A comprehensive multi-interface bridge for Aerofly FS4 that exposes all 339 flight simulator variables through multiple communication channels.
 
+**This is work in progress.**
+
 ## Features
 
 - **Complete Variable Coverage**: All 339 variables from the official Aerofly FS4 SDK
