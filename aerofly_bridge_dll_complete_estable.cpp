@@ -27,6 +27,8 @@
 #include <memory>
 #include <atomic>
 #include <queue>
+#include <iomanip>  // For std::setprecision y std::fixed
+#include <cmath>    // For std::isfinite
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -1908,7 +1910,7 @@ public:
     void BroadcastData(const AeroflyBridgeData* data) {
         if (!data || !running) return;
         
-        // Create JSON message
+        // Create JSON message with proper formatting
         std::string json_data = CreateDataJSON(data);
         
         std::lock_guard<std::mutex> lock(clients_mutex);
@@ -1916,13 +1918,29 @@ public:
         // Send to all connected clients
         auto it = client_sockets.begin();
         while (it != client_sockets.end()) {
-            int result = send(*it, json_data.c_str(), json_data.length(), 0);
-            if (result == SOCKET_ERROR) {
-                // Client disconnected, remove from list
+            // CRITICAL FIX 3: Send complete JSON in one operation to avoid fragmentation
+            int total_sent = 0;
+            int data_size = static_cast<int>(json_data.length());
+            const char* data_ptr = json_data.c_str();
+            
+            bool send_successful = true;
+            
+            // Ensure complete JSON is sent
+            while (total_sent < data_size && send_successful) {
+                int result = send(*it, data_ptr + total_sent, data_size - total_sent, 0);
+                if (result == SOCKET_ERROR) {
+                    send_successful = false;
+                    break;
+                }
+                total_sent += result;
+            }
+            
+            if (!send_successful || total_sent != data_size) {
+                // Client disconnected or send failed, remove from list
                 closesocket(*it);
                 it = client_sockets.erase(it);
             } else {
-                ++it;
+                ++it;  // Success, move to next client
             }
         }
     }
@@ -2036,70 +2054,80 @@ private:
     
     std::string CreateDataJSON(const AeroflyBridgeData* data) {
         std::ostringstream json;
+        
+        // CRITICAL FIX 1: Set fixed precision to prevent scientific notation (1e+08)
+        json << std::fixed << std::setprecision(6);
+        
         json << "{";
         json << "\"timestamp\":" << data->timestamp_us << ",";
         json << "\"data_valid\":" << data->data_valid << ",";
         json << "\"update_counter\":" << data->update_counter << ",";
         
-        // Aircraft basic data
+        // Aircraft data with NaN/Infinity protection
         json << "\"aircraft\":{";
-        json << "\"latitude\":" << data->latitude << ",";
-        json << "\"longitude\":" << data->longitude << ",";
-        json << "\"altitude\":" << data->altitude << ",";
-        json << "\"pitch\":" << data->pitch << ",";
-        json << "\"bank\":" << data->bank << ",";
-        json << "\"heading\":" << data->true_heading << ",";
-        json << "\"airspeed\":" << data->indicated_airspeed << ",";
-        json << "\"ground_speed\":" << data->ground_speed << ",";
-        json << "\"vertical_speed\":" << data->vertical_speed << ",";
-        json << "\"angle_of_attack\":" << data->angle_of_attack << ",";
-        json << "\"on_ground\":" << data->on_ground;
-        json << "},";
+        json << "\"latitude\":" << (std::isfinite(data->latitude) ? data->latitude : 0.0) << ",";
+        json << "\"longitude\":" << (std::isfinite(data->longitude) ? data->longitude : 0.0) << ",";
+        json << "\"altitude\":" << (std::isfinite(data->altitude) ? data->altitude : 0.0) << ",";
+        json << "\"pitch\":" << (std::isfinite(data->pitch) ? data->pitch : 0.0) << ",";
+        json << "\"bank\":" << (std::isfinite(data->bank) ? data->bank : 0.0) << ",";
+        json << "\"heading\":" << (std::isfinite(data->true_heading) ? data->true_heading : 0.0) << ",";
+        json << "\"airspeed\":" << (std::isfinite(data->indicated_airspeed) ? data->indicated_airspeed : 0.0) << ",";
+        json << "\"ground_speed\":" << (std::isfinite(data->ground_speed) ? data->ground_speed : 0.0) << ",";
+        json << "\"vertical_speed\":" << (std::isfinite(data->vertical_speed) ? data->vertical_speed : 0.0) << ",";
+        json << "\"angle_of_attack\":" << (std::isfinite(data->angle_of_attack) ? data->angle_of_attack : 0.0) << ",";
+        json << "\"on_ground\":" << (std::isfinite(data->on_ground) ? data->on_ground : 0.0);
+        json << "},";  // No trailing comma
         
         // Controls
         json << "\"controls\":{";
-        json << "\"pitch_input\":" << data->pitch_input << ",";
-        json << "\"roll_input\":" << data->roll_input << ",";
-        json << "\"yaw_input\":" << data->yaw_input << ",";
-        json << "\"throttle\":" << data->throttle_position << ",";
-        json << "\"flaps\":" << data->flaps_position << ",";
-        json << "\"gear\":" << data->gear_position;
+        json << "\"pitch_input\":" << (std::isfinite(data->pitch_input) ? data->pitch_input : 0.0) << ",";
+        json << "\"roll_input\":" << (std::isfinite(data->roll_input) ? data->roll_input : 0.0) << ",";
+        json << "\"yaw_input\":" << (std::isfinite(data->yaw_input) ? data->yaw_input : 0.0) << ",";
+        json << "\"throttle\":" << (std::isfinite(data->throttle_position) ? data->throttle_position : 0.0) << ",";
+        json << "\"flaps\":" << (std::isfinite(data->flaps_position) ? data->flaps_position : 0.0) << ",";
+        json << "\"gear\":" << (std::isfinite(data->gear_position) ? data->gear_position : 0.0);
         json << "},";
         
         // Navigation
         json << "\"navigation\":{";
-        json << "\"com1_frequency\":" << data->com1_frequency << ",";
-        json << "\"com1_standby\":" << data->com1_standby_frequency << ",";
-        json << "\"nav1_frequency\":" << data->nav1_frequency << ",";
-        json << "\"nav1_course\":" << data->nav1_selected_course;
+        json << "\"com1_frequency\":" << (std::isfinite(data->com1_frequency) ? data->com1_frequency : 0.0) << ",";
+        json << "\"com1_standby\":" << (std::isfinite(data->com1_standby_frequency) ? data->com1_standby_frequency : 0.0) << ",";
+        json << "\"nav1_frequency\":" << (std::isfinite(data->nav1_frequency) ? data->nav1_frequency : 0.0) << ",";
+        json << "\"nav1_course\":" << (std::isfinite(data->nav1_selected_course) ? data->nav1_selected_course : 0.0);
         json << "},";
         
         // Autopilot
         json << "\"autopilot\":{";
-        json << "\"engaged\":" << data->ap_engaged << ",";
-        json << "\"selected_airspeed\":" << data->ap_selected_airspeed << ",";
-        json << "\"selected_heading\":" << data->ap_selected_heading << ",";
-        json << "\"selected_altitude\":" << data->ap_selected_altitude;
+        json << "\"engaged\":" << (std::isfinite(data->ap_engaged) ? data->ap_engaged : 0.0) << ",";
+        json << "\"selected_airspeed\":" << (std::isfinite(data->ap_selected_airspeed) ? data->ap_selected_airspeed : 0.0) << ",";
+        json << "\"selected_heading\":" << (std::isfinite(data->ap_selected_heading) ? data->ap_selected_heading : 0.0) << ",";
+        json << "\"selected_altitude\":" << (std::isfinite(data->ap_selected_altitude) ? data->ap_selected_altitude : 0.0);
         json << "},";
         
         // Performance speeds
         json << "\"performance\":{";
-        json << "\"vs0\":" << data->vs0_speed << ",";
-        json << "\"vs1\":" << data->vs1_speed << ",";
-        json << "\"vfe\":" << data->vfe_speed << ",";
-        json << "\"vno\":" << data->vno_speed << ",";
-        json << "\"vne\":" << data->vne_speed;
+        json << "\"vs0\":" << (std::isfinite(data->vs0_speed) ? data->vs0_speed : 0.0) << ",";
+        json << "\"vs1\":" << (std::isfinite(data->vs1_speed) ? data->vs1_speed : 0.0) << ",";
+        json << "\"vfe\":" << (std::isfinite(data->vfe_speed) ? data->vfe_speed : 0.0) << ",";
+        json << "\"vno\":" << (std::isfinite(data->vno_speed) ? data->vno_speed : 0.0) << ",";
+        json << "\"vne\":" << (std::isfinite(data->vne_speed) ? data->vne_speed : 0.0);
         json << "},";
         
-        // All variables array (for direct access by index)
+        // All variables array (with NaN/Infinity protection)
         json << "\"all_variables\":[";
         for (int i = 0; i < (int)VariableIndex::VARIABLE_COUNT; ++i) {
             if (i > 0) json << ",";
-            json << data->all_variables[i];
+            double value = data->all_variables[i];
+            // CRITICAL: Protect against NaN/Infinity in array
+            json << (std::isfinite(value) ? value : 0.0);
         }
-        json << "]";
+        json << "]";  // No trailing comma
         
-        json << "}\n";
+        json << "}";  // Close main JSON object
+        
+        // CRITICAL FIX 2: Add newline separator to prevent JSON concatenation
+        json << "\n";
+        
         return json.str();
     }
     
