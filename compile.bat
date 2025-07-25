@@ -39,10 +39,10 @@ call %VS_PATH%
 
 REM Compilar la DLL
 echo  Compilando AeroflyBridge.dll...
-cl /LD /EHsc /O2 /DWIN32 /D_WINDOWS /D_USRDLL ^
+cl /LD /EHsc /O2 /std:c++17 /DWIN32 /D_WINDOWS /D_USRDLL ^
    aerofly_bridge_dll_complete_estable.cpp ^
    /Fe:AeroflyBridge.dll ^
-   /link ws2_32.lib
+   /link ws2_32.lib advapi32.lib
 
 REM Verificar resultado
 if exist "AeroflyBridge.dll" (
