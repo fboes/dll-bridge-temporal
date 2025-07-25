@@ -34,6 +34,34 @@
 
 #include "tm_external_message.h"
 
+#include <regex>
+#include <fstream>
+#include <filesystem>
+#include <set>
+#include <chrono>
+#include <ctime>
+#include <algorithm>
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// GLOBAL LOGGING FUNCTION - For debugging hybrid system
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void HybridLogToFile(const std::string& message) {
+    try {
+        std::ofstream log_file("C:\\Users\\Admin\\Documents\\hybrid_debug.log", std::ios::app);
+        if (log_file.is_open()) {
+            auto now = std::chrono::system_clock::now();
+            auto time_t = std::chrono::system_clock::to_time_t(now);
+            char timestamp[100];
+            strftime(timestamp, sizeof(timestamp), "%H:%M:%S", localtime(&time_t));
+            log_file << "[" << timestamp << "] " << message << std::endl;
+            log_file.close();
+        }
+    } catch (...) {
+        // Ignore file errors - don't crash because of logging
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // OPTIMIZED DATA STRUCTURE - All 339 Variables Organized
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,8 +154,144 @@ struct AeroflyBridgeData {
     // === ALL VARIABLES ARRAY (2712 bytes) - Complete Access ===
     double all_variables[339];     // 339 variables by index (complete SDK coverage)
 
-    // NOTE: Full implementation with all 339 variables from official SDK + extensions
-    // Total size: ~3384 bytes (optimized for complete variable coverage)
+    // === DYNAMIC VARIABLES SYSTEM (NEW) ===
+    uint32_t dynamic_count;          // Number of active dynamic variables
+    uint32_t dynamic_capacity;       // Maximum capacity (5000)
+
+    // Hash-based lookup table for O(1) average access
+    struct DynamicVariableEntry {
+        char name[64];               // Full variable name (e.g., "A380.MCDU.FlightPlan")
+        uint32_t value_index;        // Index in dynamic_values array
+        uint32_t name_hash;          // CRC32 hash of name for fast comparison
+        uint32_t access_count;       // Usage tracking for optimization
+        uint16_t aircraft_id;        // Aircraft identifier (0=global, 1=A380, 2=C172, etc.)
+        uint16_t category_id;        // Category (0=Controls, 1=Navigation, 2=Engine, etc.)
+    } dynamic_lookup[5000];
+
+    // Values array - aligned for fast access
+    double dynamic_values[5000];
+
+    // Category index for efficient browsing
+    struct CategoryInfo {
+        char name[32];               // Category name ("Controls", "Navigation", etc.)
+        uint32_t start_index;        // First variable index in this category
+        uint32_t count;              // Number of variables in category
+    } categories[100];               // Up to 100 categories
+    uint32_t category_count;
+
+    // Aircraft index for aircraft-specific queries
+    struct AircraftInfo {
+        char name[32];               // Aircraft name ("A380", "C172", etc.)
+        uint32_t start_index;        // First variable index for this aircraft
+        uint32_t count;              // Number of variables for this aircraft
+    } aircraft[50];                  // Up to 50 aircraft
+    uint32_t aircraft_count;
+
+    // === HYBRID SYSTEM INFO ===
+    uint32_t hybrid_core_variables;        // Number of core variables available
+    uint32_t hybrid_dynamic_variables;     // Number of dynamic variables created
+    uint32_t hybrid_discovered_variables;  // Number of variables discovered
+    uint32_t hybrid_discovery_complete;    // 1 = discovery complete, 0 = in progress
+    char aerofly_path[256];                // Path to Aerofly installation (null-terminated)
+    uint32_t reserved_hybrid[11];          // For future hybrid features
+
+    // === INLINE SEARCH FUNCTIONS ===
+
+    // Fast hash function for variable names
+    static uint32_t ComputeHash(const char* str) {
+        uint32_t hash = 5381;
+        while (*str) {
+            hash = ((hash << 5) + hash) + *str++;
+        }
+        return hash;
+    }
+
+    // Find dynamic variable by name - O(1) average case
+    int FindDynamicVariable(const char* name) const {
+        if (!name || dynamic_count == 0) return -1;
+        
+        uint32_t hash = ComputeHash(name);
+        
+        // Linear probe with hash comparison first (faster than string compare)
+        for (uint32_t i = 0; i < dynamic_count; i++) {
+            if (dynamic_lookup[i].name_hash == hash) {
+                // Hash match - verify with string comparison
+                if (strcmp(dynamic_lookup[i].name, name) == 0) {
+                    // Found! Increment access counter for optimization tracking
+                    const_cast<DynamicVariableEntry&>(dynamic_lookup[i]).access_count++;
+                    return dynamic_lookup[i].value_index;
+                }
+            }
+        }
+        return -1; // Not found
+    }
+
+    // Get dynamic variable value by name
+    double GetDynamicValue(const char* name, double default_value = 0.0) const {
+        int index = FindDynamicVariable(name);
+        return (index >= 0) ? dynamic_values[index] : default_value;
+    }
+
+    // NOTE: Updated total size: ~3688 bytes (with hybrid system support)
+    };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// ENHANCED VARIABLE INFO STRUCTURE - Reemplaza TMDParser::VariableInfo
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct EnhancedVariableInfo {
+    std::string name;
+    std::string aircraft;
+    std::string full_path;
+    
+    // Type information
+    tm_msg_data_type data_type;
+    tm_msg_flag flag_type;
+    tm_msg_access access_type;
+    tm_msg_unit unit_type;
+    
+    // Event information
+    bool is_event;
+    bool is_toggle;
+    bool is_step;
+    bool is_move;
+    bool is_offset;
+    bool is_active;
+    std::string primary_qualifier;
+    std::vector<std::string> valid_qualifiers;
+    
+    // Metadata
+    std::string description;
+    std::string category;
+    double min_value;
+    double max_value;
+    double step_size;
+    
+    EnhancedVariableInfo() : 
+        data_type(tm_msg_data_type::Double),
+        flag_type(tm_msg_flag::Value),
+        access_type(tm_msg_access::ReadWrite),
+        unit_type(tm_msg_unit::None),
+        is_event(false), is_toggle(false), is_step(false), is_move(false),
+        is_offset(false), is_active(false),
+        min_value(0.0), max_value(1.0), step_size(0.1) {}
+        
+    EnhancedVariableInfo(const std::string& var_name, const std::string& aircraft_name, 
+                        const std::string& path) : EnhancedVariableInfo() {
+        name = var_name;
+        aircraft = aircraft_name;
+        full_path = path;
+    }
+    
+    // Helper methods
+    bool HasQualifier(const std::string& qualifier) const {
+        return std::find(valid_qualifiers.begin(), valid_qualifiers.end(), qualifier) 
+               != valid_qualifiers.end();
+    }
+    
+    bool IsWritable() const {
+        return access_type == tm_msg_access::Write || access_type == tm_msg_access::ReadWrite;
+    }
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1260,6 +1424,861 @@ F( ILS2Data,                              "Navigation.ILS2Data",                
 
 MESSAGE_LIST(TM_MESSAGE)
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// AEROFLY PATH DISCOVERY - Automatic detection of Aerofly FS4 installation
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+class AeroflyPathDiscovery {
+    public:
+        static std::string FindAeroflyPath() {
+            std::vector<std::string> candidate_paths = {
+                // Steam common locations
+                "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Aerofly FS 4 Flight Simulator",
+                "C:\\Program Files\\Steam\\steamapps\\common\\Aerofly FS 4 Flight Simulator",
+                "D:\\Steam\\steamapps\\common\\Aerofly FS 4 Flight Simulator",
+                "E:\\Steam\\steamapps\\common\\Aerofly FS 4 Flight Simulator",
+                
+                // Direct installation paths
+                "C:\\Program Files\\Aerofly FS 4 Flight Simulator",
+                "C:\\Program Files (x86)\\Aerofly FS 4 Flight Simulator",
+                "C:\\Aerofly FS 4 Flight Simulator",
+                
+                // Custom Steam library locations
+                "D:\\SteamLibrary\\steamapps\\common\\Aerofly FS 4 Flight Simulator",
+                "E:\\SteamLibrary\\steamapps\\common\\Aerofly FS 4 Flight Simulator",
+                "F:\\SteamLibrary\\steamapps\\common\\Aerofly FS 4 Flight Simulator"
+            };
+            
+            // Check standard paths first
+            for (const auto& path : candidate_paths) {
+                if (std::filesystem::exists(path + "\\aircraft")) {
+                    OutputDebugStringA(("Found Aerofly at: " + path + "\n").c_str());
+                    HybridLogToFile("SUCCESS: Found Aerofly at: " + path);
+                    return path;
+                }
+                // Log attempted paths for debugging
+                HybridLogToFile("Checked path (not found): " + path);
+            }
+            
+            // Try registry-based discovery for Steam
+            std::string steam_path = GetSteamPathFromRegistry();
+            if (!steam_path.empty()) {
+                std::string aerofly_path = steam_path + "\\steamapps\\common\\Aerofly FS 4 Flight Simulator";
+                if (std::filesystem::exists(aerofly_path + "\\aircraft")) {
+                    OutputDebugStringA(("Found Aerofly via Steam registry: " + aerofly_path + "\n").c_str());
+                    return aerofly_path;
+                }
+            }
+            
+            OutputDebugStringA("WARNING: Aerofly FS 4 installation not found\n");
+            return "";
+        }
+        
+    private:
+        static std::string GetSteamPathFromRegistry() {
+            // Registry reading implementation for Steam path discovery
+            // This is optional - if it fails, we fall back to static paths
+            try {
+                HKEY hKey;
+                if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, 
+                                 "SOFTWARE\\WOW6432Node\\Valve\\Steam", 
+                                 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+                    
+                    char steam_path[512];
+                    DWORD size = sizeof(steam_path);
+                    if (RegQueryValueExA(hKey, "InstallPath", NULL, NULL, 
+                                        (LPBYTE)steam_path, &size) == ERROR_SUCCESS) {
+                        RegCloseKey(hKey);
+                        return std::string(steam_path);
+                    }
+                    RegCloseKey(hKey);
+                }
+            }
+            catch (...) {
+                // Ignore registry errors
+            }
+            return "";
+        }
+    };
+    
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// ENHANCED TMD PARSER - Reemplaza la clase TMDParser existente
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+class EnhancedTMDParser {
+    public:
+        static std::vector<EnhancedVariableInfo> ParseTMDFile(const std::string& file_path, 
+                                                             const std::string& aircraft_name) {
+            std::vector<EnhancedVariableInfo> variables;
+            
+            try {
+                std::ifstream file(file_path);
+                if (!file.is_open()) {
+                    HybridLogToFile("ERROR: Cannot open TMD file: " + file_path);
+                    return variables;
+                }
+                
+                std::string content((std::istreambuf_iterator<char>(file)),
+                                   std::istreambuf_iterator<char>());
+                file.close();
+                
+                HybridLogToFile("Parsing TMD file: " + file_path + " for aircraft: " + aircraft_name);
+                
+                // Parse message definitions with enhanced metadata
+                ParseMessageDefinitions(content, aircraft_name, file_path, variables);
+                
+                HybridLogToFile("Parsed " + std::to_string(variables.size()) + 
+                               " variables from " + aircraft_name);
+                
+            } catch (const std::exception& e) {
+                HybridLogToFile("ERROR parsing TMD file " + file_path + ": " + e.what());
+            }
+            
+            return variables;
+        }
+        
+        static std::vector<EnhancedVariableInfo> ScanAllAircraft(const std::string& aerofly_path) {
+            std::vector<EnhancedVariableInfo> all_variables;
+            
+            if (aerofly_path.empty()) {
+                HybridLogToFile("ERROR: No Aerofly path provided for scanning");
+                return all_variables;
+            }
+            
+            std::string aircraft_dir = aerofly_path + "\\aircraft";
+            HybridLogToFile("Scanning aircraft directory: " + aircraft_dir);
+            
+            try {
+                if (!std::filesystem::exists(aircraft_dir)) {
+                    HybridLogToFile("ERROR: Aircraft directory not found: " + aircraft_dir);
+                    return all_variables;
+                }
+                
+                int aircraft_count = 0;
+                for (const auto& entry : std::filesystem::directory_iterator(aircraft_dir)) {
+                    if (entry.is_directory()) {
+                        std::string aircraft_name = entry.path().filename().string();
+                        std::string controls_file = entry.path().string() + "\\controls.tmd";
+                        
+                        if (std::filesystem::exists(controls_file)) {
+                            auto variables = ParseTMDFile(controls_file, aircraft_name);
+                            all_variables.insert(all_variables.end(), variables.begin(), variables.end());
+                            aircraft_count++;
+                            
+                            HybridLogToFile("Aircraft: " + aircraft_name + " - Variables found: " + 
+                                           std::to_string(variables.size()));
+                        }
+                    }
+                }
+                
+                HybridLogToFile("Scanned " + std::to_string(aircraft_count) + 
+                               " aircraft, found " + std::to_string(all_variables.size()) + 
+                               " total variables");
+                
+            } catch (const std::exception& e) {
+                HybridLogToFile("ERROR scanning aircraft directory: " + std::string(e.what()));
+            }
+            
+            return all_variables;
+        }
+        
+    private:
+        static void ParseMessageDefinitions(const std::string& content, 
+                                           const std::string& aircraft_name,
+                                           const std::string& file_path,
+                                           std::vector<EnhancedVariableInfo>& variables) {
+            
+            // Enhanced pattern to capture event context and qualifiers
+            std::regex event_pattern(R"(<\[control_message\]\[(On(?:Step|Rotate|Push|Release))\]\[\]\s*<\[string8\]\[Message\]\[([^\]]+)\]>\s*<\[string8\]\[Qualifiers\]\[([^\]]+)\]>)");
+            std::sregex_iterator iter(content.begin(), content.end(), event_pattern);
+            std::sregex_iterator end;
+            
+            std::set<std::string> unique_vars;
+            
+            while (iter != end) {
+                std::string event_type = (*iter)[1].str();      // OnStep, OnRotate, OnPush, OnRelease
+                std::string variable_name = (*iter)[2].str();   // Variable name
+                std::string qualifier = (*iter)[3].str();       // step, toggle, event, etc.
+                
+                if (IsValidVariable(variable_name) && 
+                    unique_vars.find(variable_name) == unique_vars.end()) {
+                    
+                    EnhancedVariableInfo var_info(variable_name, aircraft_name, file_path);
+                    
+                    // Enhanced analysis based on ACTUAL TMD content
+                    AnalyzeVariablePropertiesFromTMD(variable_name, event_type, qualifier, var_info);
+                    
+                    variables.push_back(var_info);
+                    unique_vars.insert(variable_name);
+                    
+                    HybridLogToFile("Found variable: " + variable_name + 
+                                   " (Event: " + (var_info.is_event ? "YES" : "NO") + 
+                                   ", EventType: " + event_type + 
+                                   ", Qualifier: " + qualifier + 
+                                   ", Qualifiers: " + std::to_string(var_info.valid_qualifiers.size()) + ")");
+                }
+                ++iter;
+            }
+            
+            // Fallback: Also check for variables without explicit events (legacy support)
+            std::regex simple_message_pattern(R"(<\[string8\]\[Message\]\[([^\]]+)\]>)");
+            std::sregex_iterator simple_iter(content.begin(), content.end(), simple_message_pattern);
+            
+            while (simple_iter != end) {
+                std::string variable_name = (*simple_iter)[1].str();
+                
+                if (IsValidVariable(variable_name) && 
+                    unique_vars.find(variable_name) == unique_vars.end()) {
+                    
+                    EnhancedVariableInfo var_info(variable_name, aircraft_name, file_path);
+                    
+                    // Use original analysis for non-event variables
+                    AnalyzeVariableProperties(variable_name, var_info);
+                    
+                    variables.push_back(var_info);
+                    unique_vars.insert(variable_name);
+                    
+                    HybridLogToFile("Found variable: " + variable_name + 
+                                   " (Event: " + (var_info.is_event ? "YES" : "NO") + 
+                                   ", Qualifiers: " + std::to_string(var_info.valid_qualifiers.size()) + ")");
+                }
+                ++simple_iter;
+            }
+        }
+        
+        static void AnalyzeVariableProperties(const std::string& variable_name, 
+                                             EnhancedVariableInfo& var_info) {
+            
+            // Determine data type
+            var_info.data_type = tm_msg_data_type::Double; // Most common
+            
+            // Analyze variable name patterns for event types
+            if (variable_name.find("Flaps") != std::string::npos ||
+                variable_name.find("Gear") != std::string::npos ||
+                variable_name.find("Brake") != std::string::npos ||
+                variable_name.find("Throttle") != std::string::npos) {
+                
+                // These often support step/move operations
+                var_info.is_step = true;
+                var_info.is_move = true;
+                var_info.valid_qualifiers.push_back("step");
+                var_info.valid_qualifiers.push_back("move");
+                var_info.primary_qualifier = "step";
+            }
+            
+            if (variable_name.find("Toggle") != std::string::npos ||
+                variable_name.find("Switch") != std::string::npos ||
+                variable_name.find("Button") != std::string::npos) {
+                
+                var_info.is_toggle = true;
+                var_info.is_event = true;
+                var_info.flag_type = tm_msg_flag::Toggle;
+                var_info.valid_qualifiers.push_back("toggle");
+                var_info.primary_qualifier = "toggle";
+            }
+            
+            // Check for specific patterns that indicate events
+            if (variable_name.find("FrequencySwap") != std::string::npos ||
+                variable_name.find("Event") != std::string::npos) {
+                
+                var_info.is_event = true;
+                var_info.flag_type = tm_msg_flag::Event;
+                var_info.access_type = tm_msg_access::Write;
+                var_info.valid_qualifiers.push_back("trigger");
+                var_info.primary_qualifier = "trigger";
+            }
+            
+            // Input controls that support offset
+            if (variable_name.find("Input") != std::string::npos ||
+                variable_name.find("Pitch") != std::string::npos ||
+                variable_name.find("Roll") != std::string::npos ||
+                variable_name.find("Yaw") != std::string::npos) {
+                
+                var_info.is_offset = true;
+                var_info.valid_qualifiers.push_back("offset");
+                if (var_info.primary_qualifier.empty()) {
+                    var_info.primary_qualifier = "offset";
+                }
+            }
+            
+            // Active flags for continuous controls
+            if (variable_name.find("Active") != std::string::npos ||
+                variable_name.find("WheelBrake") != std::string::npos) {
+                
+                var_info.is_active = true;
+                var_info.flag_type = tm_msg_flag::Active;
+                var_info.valid_qualifiers.push_back("active");
+            }
+            
+            // Set default primary qualifier if none set
+            if (var_info.primary_qualifier.empty()) {
+                var_info.primary_qualifier = "value";
+                var_info.valid_qualifiers.push_back("value");
+            }
+            
+            // Determine access type
+            if (var_info.is_event || var_info.is_toggle) {
+                var_info.access_type = tm_msg_access::Write;
+            } else {
+                var_info.access_type = tm_msg_access::ReadWrite;
+            }
+            
+            // Set category based on variable name
+            if (variable_name.find("Controls.") == 0) {
+                var_info.category = "Controls";
+            } else if (variable_name.find("Aircraft.") == 0) {
+                var_info.category = "Aircraft";
+            } else if (variable_name.find("Autopilot.") == 0) {
+                var_info.category = "Autopilot";
+            } else if (variable_name.find("Navigation.") == 0) {
+                var_info.category = "Navigation";
+            } else if (variable_name.find("Communication.") == 0) {
+                var_info.category = "Communication";
+            } else {
+                var_info.category = "Other";
+            }
+        }
+        
+        static bool IsValidVariable(const std::string& var_name) {
+            if (var_name.empty() || var_name.length() < 3) return false;
+            if (var_name.find("__") != std::string::npos) return false;
+            if (var_name.find("Debug") != std::string::npos) return false;
+            if (var_name.find("Internal") != std::string::npos) return false;
+            
+            for (char c : var_name) {
+                if (!std::isalnum(c) && c != '.' && c != '_') return false;
+            }
+            
+            return true;
+        }
+        
+        // NEW: Enhanced analysis based on actual TMD event context
+        static void AnalyzeVariablePropertiesFromTMD(const std::string& variable_name,
+                                                     const std::string& event_type,
+                                                     const std::string& qualifier,
+                                                     EnhancedVariableInfo& var_info) {
+            
+            // Set base properties
+            var_info.data_type = tm_msg_data_type::Double;
+            var_info.access_type = tm_msg_access::ReadWrite;
+            
+            // Mark as event based on TMD context
+            var_info.is_event = true;  // All control_message entries are events
+            
+            // Analyze event type from TMD
+            if (event_type == "OnStep") {
+                var_info.is_step = true;
+                var_info.flag_type = tm_msg_flag::Step;
+                var_info.valid_qualifiers.push_back("step");
+                var_info.primary_qualifier = "step";
+            }
+            else if (event_type == "OnRotate") {
+                var_info.is_step = true;  // Rotation often uses step semantics
+                var_info.flag_type = tm_msg_flag::Step;
+                var_info.valid_qualifiers.push_back("step");
+                var_info.primary_qualifier = "step";
+            }
+            else if (event_type == "OnPush" || event_type == "OnRelease") {
+                if (qualifier == "toggle") {
+                    var_info.is_toggle = true;
+                    var_info.flag_type = tm_msg_flag::Toggle;
+                    var_info.valid_qualifiers.push_back("toggle");
+                    var_info.primary_qualifier = "toggle";
+                }
+                else if (qualifier == "event") {
+                    var_info.flag_type = tm_msg_flag::Event;
+                    var_info.valid_qualifiers.push_back("event");
+                    var_info.primary_qualifier = "event";
+                }
+                else {
+                    // Default for push/release
+                    var_info.is_toggle = true;
+                    var_info.flag_type = tm_msg_flag::Toggle;
+                    var_info.valid_qualifiers.push_back("toggle");
+                    var_info.primary_qualifier = "toggle";
+                }
+            }
+            
+            // Add the actual qualifier from TMD
+            if (!qualifier.empty() && 
+                std::find(var_info.valid_qualifiers.begin(), var_info.valid_qualifiers.end(), qualifier) == var_info.valid_qualifiers.end()) {
+                var_info.valid_qualifiers.push_back(qualifier);
+            }
+            
+            // Input controls support offset
+            if (variable_name.find("Input") != std::string::npos) {
+                var_info.is_offset = true;
+                var_info.valid_qualifiers.push_back("offset");
+            }
+            
+            // Set category based on variable name
+            if (variable_name.find("Controls.") == 0) {
+                var_info.category = "Controls";
+            } else if (variable_name.find("Doors.") == 0) {
+                var_info.category = "Doors";  
+            } else if (variable_name.find("Windows.") == 0) {
+                var_info.category = "Windows";
+            } else {
+                var_info.category = "Aircraft";
+            }
+            
+            // Set reasonable defaults
+            var_info.min_value = 0.0;
+            var_info.max_value = 1.0;
+            var_info.step_size = 0.1;
+        }
+    };
+    
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // HYBRID VARIABLE MANAGER - Core hybrid system
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    class HybridVariableManager {
+    private:
+        // STATIC: Core 339 SDK variables (maximum performance)
+        std::unordered_map<std::string, tm_external_message*> core_messages;
+        
+        // DYNAMIC: Discovered variables (high flexibility)
+        std::unordered_map<std::string, std::unique_ptr<tm_external_message>> dynamic_messages;
+        
+        // Variable discovery data
+        std::vector<EnhancedVariableInfo> discovered_variables;
+        mutable std::unordered_map<std::string, const EnhancedVariableInfo*> variable_info_cache;
+        std::string aerofly_path;
+        bool discovery_completed;
+        bool core_initialized;
+        
+        // Performance tracking
+        mutable std::mutex access_mutex;
+        mutable std::unordered_map<std::string, int> access_counter;
+        
+        // Shared memory interface
+        AeroflyBridgeData* shared_data;
+        
+    public:
+        HybridVariableManager() : discovery_completed(false), core_initialized(false), shared_data(nullptr) {}
+        
+
+        
+        bool Initialize(AeroflyBridgeData* data = nullptr) {
+            HybridLogToFile("=== HybridVariableManager::Initialize() STARTED ===");
+            OutputDebugStringA("=== HybridVariableManager::Initialize() STARTED ===\n");
+            
+            shared_data = data;
+            
+            // Phase 1: Initialize core static variables (existing functionality)
+            if (!InitializeCoreVariables()) {
+                HybridLogToFile("ERROR: Failed to initialize core variables");
+                OutputDebugStringA("ERROR: Failed to initialize core variables\n");
+                return false;
+            }
+            HybridLogToFile("SUCCESS: Core variables initialized");
+            
+            // Phase 2: Discover Aerofly installation
+            aerofly_path = AeroflyPathDiscovery::FindAeroflyPath();
+            if (aerofly_path.empty()) {
+                HybridLogToFile("WARNING: Aerofly path not found, continuing with core variables only");
+                OutputDebugStringA("WARNING: Aerofly path not found, continuing with core variables only\n");
+                UpdateSharedMemoryInfo();
+                return true; // Still functional with core variables
+            }
+            HybridLogToFile("SUCCESS: Aerofly found at: " + aerofly_path);
+            
+            // ✅ NUEVO: Phase 3: SINCRONIZAR discovery durante inicialización
+            HybridLogToFile("Starting SYNCHRONOUS variable discovery...");
+            PerformDiscovery(); // ✅ CAMBIADO: Discovery síncrono, no en background
+            
+            HybridLogToFile("=== HybridVariableManager::Initialize() COMPLETED ===");
+            OutputDebugStringA("=== HybridVariableManager::Initialize() COMPLETED ===\n");
+            return true;
+        }
+        
+        tm_external_message* GetMessage(const std::string& variable_name) {
+            // FAST PATH: Check core variables first (existing performance preserved)
+            auto core_it = core_messages.find(variable_name);
+            if (core_it != core_messages.end()) {
+                TrackAccess(variable_name, true);
+                return core_it->second;
+            }
+            
+            // DYNAMIC PATH: Check discovered variables
+            std::lock_guard<std::mutex> lock(access_mutex);
+            auto dynamic_it = dynamic_messages.find(variable_name);
+            if (dynamic_it != dynamic_messages.end()) {
+                TrackAccessUnsafe(variable_name, false);
+                return dynamic_it->second.get();
+            }
+            
+            // CREATE ON DEMAND: If discovery is complete and variable not found, create it
+            if (discovery_completed && CanCreateDynamicVariable(variable_name)) {
+                auto new_message = CreateDynamicMessage(variable_name);
+                if (new_message) {
+                    tm_external_message* ptr = new_message.get();
+                    dynamic_messages[variable_name] = std::move(new_message);
+                    TrackAccessUnsafe(variable_name, false);
+                    UpdateSharedMemoryInfo();
+                    OutputDebugStringA(("Created dynamic variable: " + variable_name + "\n").c_str());
+                    return ptr;
+                }
+            }
+            
+            return nullptr;
+        }
+        
+        std::vector<std::string> GetAvailableVariables() const {
+            std::vector<std::string> variables;
+            
+            // Add core variables
+            for (const auto& pair : core_messages) {
+                variables.push_back(pair.first);
+            }
+            
+            // Add dynamic variables
+            std::lock_guard<std::mutex> lock(access_mutex);
+            for (const auto& pair : dynamic_messages) {
+                variables.push_back(pair.first);
+            }
+            
+            // Add discovered but not yet created variables
+            for (const auto& var_info : discovered_variables) {
+                if (dynamic_messages.find(var_info.name) == dynamic_messages.end() &&
+                    core_messages.find(var_info.name) == core_messages.end()) {
+                    variables.push_back(var_info.name);
+                }
+            }
+            
+            return variables;
+        }
+        
+        void GetStatistics(int& core_count, int& dynamic_count, int& discovered_count) const {
+            core_count = static_cast<int>(core_messages.size());
+            std::lock_guard<std::mutex> lock(access_mutex);
+            dynamic_count = static_cast<int>(dynamic_messages.size());
+            discovered_count = static_cast<int>(discovered_variables.size());
+        }
+        
+        const EnhancedVariableInfo* FindVariableInfo(const std::string& variable_name) const {
+            auto it = variable_info_cache.find(variable_name);
+            if (it != variable_info_cache.end()) {
+                return it->second;
+            }
+            
+            // Search in discovered variables
+            for (const auto& var_info : discovered_variables) {
+                if (var_info.name == variable_name) {
+                    // Cache for future lookups
+                    variable_info_cache[variable_name] = &var_info;
+                    return &var_info;
+                }
+            }
+            
+            return nullptr;
+        }
+    
+        std::string FlagTypeToString(tm_msg_flag flag) const {
+            switch (flag) {
+                case tm_msg_flag::Value: return "Value";
+                case tm_msg_flag::Event: return "Event";
+                case tm_msg_flag::Toggle: return "Toggle";
+                case tm_msg_flag::Step: return "Step";
+                case tm_msg_flag::Move: return "Move";
+                case tm_msg_flag::Offset: return "Offset";
+                case tm_msg_flag::Active: return "Active";
+                default: return "Unknown";
+            }
+        }
+    
+        std::string AccessTypeToString(tm_msg_access access) const {
+            switch (access) {
+                case tm_msg_access::Read: return "Read";
+                case tm_msg_access::Write: return "Write";
+                case tm_msg_access::ReadWrite: return "ReadWrite";
+                default: return "Unknown";
+            }
+        }
+    
+        std::vector<std::string> GetVariableDetails(const std::string& variable_name) const {
+            std::vector<std::string> details;
+            
+            const EnhancedVariableInfo* var_info = FindVariableInfo(variable_name);
+            if (var_info) {
+                details.push_back("Name: " + var_info->name);
+                details.push_back("Aircraft: " + var_info->aircraft);
+                details.push_back("Category: " + var_info->category);
+                details.push_back("Is Event: " + std::string(var_info->is_event ? "YES" : "NO"));
+                details.push_back("Primary Qualifier: " + var_info->primary_qualifier);
+                
+                if (!var_info->valid_qualifiers.empty()) {
+                    std::string qualifiers = "Valid Qualifiers: ";
+                    for (size_t i = 0; i < var_info->valid_qualifiers.size(); i++) {
+                        if (i > 0) qualifiers += ", ";
+                        qualifiers += var_info->valid_qualifiers[i];
+                    }
+                    details.push_back(qualifiers);
+                }
+            } else {
+                details.push_back("Variable not found in discovery cache");
+            }
+            
+            return details;
+        }
+
+        std::string GetDiscoveryStatus() const {
+            std::ostringstream status;
+            status << "Aerofly Path: " << (aerofly_path.empty() ? "Not Found" : aerofly_path) << "\n";
+            status << "Discovery: " << (discovery_completed ? "Complete" : "In Progress") << "\n";
+            status << "Core Variables: " << core_messages.size() << "\n";
+            status << "Dynamic Variables: " << dynamic_messages.size() << "\n";
+            status << "Discovered Variables: " << discovered_variables.size() << "\n";
+            return status.str();
+        }
+        
+    private:
+        bool InitializeCoreVariables() {
+            try {
+                // Map all existing static messages from the current DLL
+                core_messages["Controls.Throttle"] = &MessageControlsThrottle;
+                core_messages["Controls.Throttle1"] = &MessageControlsThrottle1;
+                core_messages["Controls.Throttle2"] = &MessageControlsThrottle2;
+                core_messages["Controls.Throttle3"] = &MessageControlsThrottle3;
+                core_messages["Controls.Throttle4"] = &MessageControlsThrottle4;
+                core_messages["Controls.Pitch.Input"] = &MessageControlsPitchInput;
+                core_messages["Controls.Roll.Input"] = &MessageControlsRollInput;
+                core_messages["Controls.Yaw.Input"] = &MessageControlsYawInput;
+                core_messages["Controls.Flaps"] = &MessageControlsFlaps;
+                core_messages["Controls.Gear"] = &MessageControlsGear;
+                core_messages["Controls.WheelBrake.Left"] = &MessageControlsWheelBrakeLeft;
+                core_messages["Controls.WheelBrake.Right"] = &MessageControlsWheelBrakeRight;
+                core_messages["Controls.AirBrake"] = &MessageControlsAirBrake;
+                core_messages["Controls.AirBrake.Arm"] = &MessageControlsAirBrakeArm;
+                core_messages["Controls.Mixture"] = &MessageControlsMixture;
+                core_messages["Controls.Mixture1"] = &MessageControlsMixture1;
+                core_messages["Controls.Mixture2"] = &MessageControlsMixture2;
+                core_messages["Controls.Mixture3"] = &MessageControlsMixture3;
+                core_messages["Controls.Mixture4"] = &MessageControlsMixture4;
+                core_messages["Controls.ThrustReverse"] = &MessageControlsThrustReverse;
+                core_messages["Controls.ThrustReverse1"] = &MessageControlsThrustReverse1;
+                core_messages["Controls.ThrustReverse2"] = &MessageControlsThrustReverse2;
+                core_messages["Controls.ThrustReverse3"] = &MessageControlsThrustReverse3;
+                core_messages["Controls.ThrustReverse4"] = &MessageControlsThrustReverse4;
+                core_messages["Controls.PropellerSpeed1"] = &MessageControlsPropellerSpeed1;
+                core_messages["Controls.PropellerSpeed2"] = &MessageControlsPropellerSpeed2;
+                core_messages["Controls.PropellerSpeed3"] = &MessageControlsPropellerSpeed3;
+                core_messages["Controls.PropellerSpeed4"] = &MessageControlsPropellerSpeed4;
+                core_messages["Controls.GliderAirBrake"] = &MessageControlsGliderAirBrake;
+                core_messages["Controls.Collective"] = &MessageControlsCollective;
+                core_messages["Controls.TailRotor"] = &MessageControlsTailRotor;
+                core_messages["Controls.CyclicPitch"] = &MessageControlsCyclicPitch;
+                core_messages["Controls.CyclicRoll"] = &MessageControlsCyclicRoll;
+                core_messages["Controls.RotorBrake"] = &MessageControlsRotorBrake;
+                core_messages["Controls.HelicopterThrottle1"] = &MessageControlsHelicopterThrottle1;
+                core_messages["Controls.HelicopterThrottle2"] = &MessageControlsHelicopterThrottle2;
+                
+                // Communication variables
+                core_messages["Communication.COM1Frequency"] = &MessageNavigationCOM1Frequency;
+                core_messages["Communication.COM1StandbyFrequency"] = &MessageNavigationCOM1StandbyFrequency;
+                core_messages["Communication.COM2Frequency"] = &MessageNavigationCOM2Frequency;
+                core_messages["Communication.COM2StandbyFrequency"] = &MessageNavigationCOM2StandbyFrequency;
+                core_messages["Communication.TransponderCode"] = &MessageTransponderCode;
+                
+                // Navigation variables
+                core_messages["Navigation.NAV1Frequency"] = &MessageNavigationNAV1Frequency;
+                core_messages["Navigation.NAV1StandbyFrequency"] = &MessageNavigationNAV1StandbyFrequency;
+                core_messages["Navigation.NAV2Frequency"] = &MessageNavigationNAV2Frequency;
+                core_messages["Navigation.NAV2StandbyFrequency"] = &MessageNavigationNAV2StandbyFrequency;
+                core_messages["Navigation.SelectedCourse1"] = &MessageNavigationSelectedCourse1;
+                core_messages["Navigation.SelectedCourse2"] = &MessageNavigationSelectedCourse2;
+                
+                // Autopilot variables
+                core_messages["Autopilot.SelectedAirspeed"] = &MessageAutopilotSelectedAirspeed;
+                core_messages["Autopilot.SelectedHeading"] = &MessageAutopilotSelectedHeading;
+                core_messages["Autopilot.SelectedAltitude"] = &MessageAutopilotSelectedAltitude;
+                core_messages["Autopilot.SelectedVerticalSpeed"] = &MessageAutopilotSelectedVerticalSpeed;
+                core_messages["Autopilot.Master"] = &MessageAutopilotMaster;
+                core_messages["Autopilot.Heading"] = &MessageAutopilotHeading;
+                core_messages["Autopilot.VerticalSpeed"] = &MessageAutopilotVerticalSpeed;
+                core_messages["Autopilot.SelectedSpeed"] = &MessageAutopilotSelectedSpeed;
+                
+                // Aircraft system variables
+                core_messages["Aircraft.ParkingBrake"] = &MessageAircraftParkingBrake;
+                core_messages["Aircraft.Starter1"] = &MessageAircraftStarter1;
+                core_messages["Aircraft.Starter2"] = &MessageAircraftStarter2;
+                core_messages["Aircraft.Starter3"] = &MessageAircraftStarter3;
+                core_messages["Aircraft.Starter4"] = &MessageAircraftStarter4;
+                core_messages["Aircraft.Ignition1"] = &MessageAircraftIgnition1;
+                core_messages["Aircraft.Ignition2"] = &MessageAircraftIgnition2;
+                core_messages["Aircraft.Ignition3"] = &MessageAircraftIgnition3;
+                core_messages["Aircraft.Ignition4"] = &MessageAircraftIgnition4;
+                core_messages["Aircraft.EngineMaster1"] = &MessageAircraftEngineMaster1;
+                core_messages["Aircraft.EngineMaster2"] = &MessageAircraftEngineMaster2;
+                core_messages["Aircraft.EngineMaster3"] = &MessageAircraftEngineMaster3;
+                core_messages["Aircraft.EngineMaster4"] = &MessageAircraftEngineMaster4;
+                core_messages["Aircraft.AutoBrakeSetting"] = &MessageAircraftAutoBrakeSetting;
+                
+                // Warning variables
+                core_messages["Warnings.MasterWarning"] = &MessageWarningsMasterWarning;
+                core_messages["Warnings.MasterCaution"] = &MessageWarningsMasterCaution;
+                core_messages["Warnings.LowOilPressure"] = &MessageWarningsLowOilPressure;
+                core_messages["Warnings.LowFuelPressure"] = &MessageWarningsLowFuelPressure;
+                
+                core_initialized = true;
+                OutputDebugStringA(("Initialized " + std::to_string(core_messages.size()) + 
+                                   " core variables\n").c_str());
+                return true;
+            }
+            catch (const std::exception& e) {
+                OutputDebugStringA(("Error initializing core variables: " + std::string(e.what()) + "\n").c_str());
+                return false;
+            }
+        }
+        
+        void PerformDiscovery() {
+            HybridLogToFile("=== Starting ENHANCED variable discovery ===");
+            HybridLogToFile("Scanning path: " + aerofly_path);
+            
+            try {
+                discovered_variables = EnhancedTMDParser::ScanAllAircraft(aerofly_path);
+                
+                // Build cache for fast lookups
+                variable_info_cache.clear();
+                for (const auto& var_info : discovered_variables) {
+                    variable_info_cache[var_info.name] = &var_info;
+                }
+                
+                std::string result_msg = "Enhanced discovery complete: Found " + 
+                                       std::to_string(discovered_variables.size()) + 
+                                       " variables across all aircraft";
+                HybridLogToFile(result_msg);
+                
+                // Log statistics
+                int event_count = 0, toggle_count = 0, step_count = 0;
+                for (const auto& var : discovered_variables) {
+                    if (var.is_event) event_count++;
+                    if (var.is_toggle) toggle_count++;
+                    if (var.is_step) step_count++;
+                }
+                
+                HybridLogToFile("Statistics: Events=" + std::to_string(event_count) + 
+                               ", Toggles=" + std::to_string(toggle_count) + 
+                               ", Steps=" + std::to_string(step_count));
+                
+                // Log sample variables
+                if (discovered_variables.size() > 0) {
+                    HybridLogToFile("Sample enhanced variables discovered:");
+                    size_t max_samples = (discovered_variables.size() < 10) ? discovered_variables.size() : 10;
+                    for (size_t i = 0; i < max_samples; i++) {
+                        const auto& var = discovered_variables[i];
+                        HybridLogToFile("  - " + var.name + " (" + var.aircraft + 
+                                       ") [" + var.category + "] Qualifiers: " + 
+                                       std::to_string(var.valid_qualifiers.size()));
+                    }
+                }
+                
+                discovery_completed = true;
+                UpdateSharedMemoryInfo();
+                
+            } catch (const std::exception& e) {
+                HybridLogToFile("ERROR during enhanced discovery: " + std::string(e.what()));
+                discovery_completed = true;
+            }
+        }
+        
+        // Helper function to calculate FNV-1a hash at runtime (same algorithm as tm_string_hasher)
+        static tm_uint64 CalculateRuntimeHash(const std::string& str) {
+            tm_uint64 hash = 14695981039346656037ull; // FNV offset basis
+            for (char c : str) {
+                hash = (hash ^ static_cast<tm_uint64>(c)) * 1099511628211ull; // FNV prime
+            }
+            return hash;
+        }
+
+        std::unique_ptr<tm_external_message> CreateDynamicMessage(const std::string& variable_name) {
+            try {
+                // Find enhanced variable info
+                const EnhancedVariableInfo* var_info = FindVariableInfo(variable_name);
+                
+                tm_uint64 hash = CalculateRuntimeHash(variable_name);
+                
+                if (var_info) {
+                    // Create message with correct metadata
+                    auto message = std::make_unique<tm_external_message>(
+                        tm_string_hash(hash),
+                        var_info->data_type,    // Correct type
+                        var_info->flag_type,    // Correct flag (Event vs Value)
+                        var_info->access_type,  // Correct access
+                        var_info->unit_type     // Correct unit
+                    );
+                    
+                    HybridLogToFile("Created dynamic message: " + variable_name + 
+                                   " with flag=" + FlagTypeToString(var_info->flag_type) +
+                                   ", access=" + AccessTypeToString(var_info->access_type));
+                    
+                    return message;
+                } else {
+                    // Fallback to simple message
+                    auto message = std::make_unique<tm_external_message>(
+                        tm_string_hash(hash),
+                        tm_msg_data_type::Double,
+                        tm_msg_flag::Value,
+                        tm_msg_access::ReadWrite,
+                        tm_msg_unit::None
+                    );
+                    
+                    HybridLogToFile("Created fallback message: " + variable_name);
+                    return message;
+                }
+                
+            } catch (const std::exception& e) {
+                HybridLogToFile("ERROR creating dynamic message for " + variable_name + ": " + e.what());
+                return nullptr;
+            }
+        }
+        
+        void UpdateSharedMemoryInfo() {
+            if (!shared_data) return;
+            
+            shared_data->hybrid_core_variables = static_cast<uint32_t>(core_messages.size());
+            shared_data->hybrid_dynamic_variables = static_cast<uint32_t>(dynamic_messages.size());
+            shared_data->hybrid_discovered_variables = static_cast<uint32_t>(discovered_variables.size());
+            shared_data->hybrid_discovery_complete = discovery_completed ? 1 : 0;
+            
+            if (!aerofly_path.empty()) {
+                strncpy_s(shared_data->aerofly_path, sizeof(shared_data->aerofly_path), 
+                         aerofly_path.c_str(), _TRUNCATE);
+            }
+        }
+        
+        void TrackAccess(const std::string& variable_name, bool is_core) const {
+            // Performance tracking for optimization decisions
+            std::lock_guard<std::mutex> lock(access_mutex);
+            TrackAccessUnsafe(variable_name, is_core);
+        }
+        
+        // Internal version that assumes mutex is already locked
+        void TrackAccessUnsafe(const std::string& variable_name, bool is_core) const {
+            // Performance tracking for optimization decisions
+            access_counter[variable_name]++;
+            
+            // Log high-usage dynamic variables that might benefit from being core
+            if (!is_core && access_counter[variable_name] == 100) {
+                OutputDebugStringA(("High usage dynamic variable: " + variable_name + 
+                                   " (consider adding to core)\n").c_str());
+            }
+        }
+        
+        bool CanCreateDynamicVariable(const std::string& variable_name) const {
+            // Check if this variable was discovered in any aircraft
+            for (const auto& var_info : discovered_variables) {
+                if (var_info.name == variable_name) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+    
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // SHARED MEMORY INTERFACE - Primary Interface
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2159,517 +3178,395 @@ public:
 // COMMAND PROCESSOR - Bidirectional Commands
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-class CommandProcessor {
-private:
-    VariableMapper mapper;
-    
-public:
-    std::vector<tm_external_message> ProcessCommands(const std::vector<std::string>& commands) {
-        std::vector<tm_external_message> messages;
+class EnhancedCommandProcessor {
+    private:
+        VariableMapper mapper;
+        HybridVariableManager* hybrid_manager;
         
-        for (const auto& command : commands) {
-            auto msg = ParseCommand(command);
-            if (msg.GetDataType() != tm_msg_data_type::None) {
-                messages.push_back(msg);
+        // Command statistics
+        mutable std::mutex stats_mutex;
+        std::unordered_map<std::string, int> command_stats;
+        
+    public:
+        EnhancedCommandProcessor() : hybrid_manager(nullptr) {}
+        
+        void SetHybridManager(HybridVariableManager* manager) {
+            hybrid_manager = manager;
+            HybridLogToFile("EnhancedCommandProcessor: Hybrid manager connected");
+            OutputDebugStringA("Enhanced CommandProcessor: Hybrid manager connected\n");
+        }
+        
+        std::vector<tm_external_message> ProcessCommands(const std::vector<std::string>& commands) {
+            std::vector<tm_external_message> messages;
+            
+            for (const auto& command : commands) {
+                auto msg = ParseEnhancedCommand(command);
+                if (msg.GetDataType() != tm_msg_data_type::None) {
+                    messages.push_back(msg);
+                    
+                    // Update statistics
+                    UpdateCommandStats(command);
+                }
+            }
+            
+            return messages;
+        }
+        
+        // Get command processing statistics
+        std::vector<std::string> GetCommandStats() const {
+            std::lock_guard<std::mutex> lock(stats_mutex);
+            std::vector<std::string> stats;
+            
+            for (const auto& pair : command_stats) {
+                stats.push_back(pair.first + ": " + std::to_string(pair.second) + " times");
+            }
+            
+            return stats;
+        }
+        
+    private:
+        tm_external_message ParseEnhancedCommand(const std::string& command) {
+            tm_external_message empty_msg;
+            
+            try {
+                HybridLogToFile("Processing enhanced command: " + command);
+                
+                // Parse JSON command
+                CommandData cmd_data = ExtractCommandData(command);
+                if (cmd_data.variable_name.empty()) {
+                    HybridLogToFile("ERROR: Invalid command format");
+                    return empty_msg;
+                }
+                
+                HybridLogToFile("Parsed command - Variable: " + cmd_data.variable_name + 
+                               ", Event: " + cmd_data.event_type + 
+                               ", Qualifier: " + cmd_data.qualifier + 
+                               ", Value: " + std::to_string(cmd_data.value));
+                
+                // Try core variables first (maximum performance)
+                tm_external_message core_msg = TryProcessCoreVariable(cmd_data);
+                if (core_msg.GetDataType() != tm_msg_data_type::None) {
+                    HybridLogToFile("✅ CORE: Variable processed: " + cmd_data.variable_name);
+                    return core_msg;
+                }
+                
+                // Try hybrid system for dynamic variables
+                if (hybrid_manager) {
+                    tm_external_message hybrid_msg = TryProcessHybridVariable(cmd_data);
+                    if (hybrid_msg.GetDataType() != tm_msg_data_type::None) {
+                        HybridLogToFile("✅ HYBRID: Variable processed: " + cmd_data.variable_name);
+                        return hybrid_msg;
+                    }
+                }
+                
+                HybridLogToFile("❌ Variable not found in core or hybrid: " + cmd_data.variable_name);
+                return empty_msg;
+                
+            } catch (const std::exception& e) {
+                HybridLogToFile("ERROR parsing enhanced command: " + std::string(e.what()));
+                return empty_msg;
+            } catch (...) {
+                HybridLogToFile("Unknown ERROR parsing enhanced command");
+                return empty_msg;
             }
         }
         
-        return messages;
-    }
-    
-private:
-    tm_external_message ParseCommand(const std::string& command) {
-        tm_external_message empty_msg;
-        
-        try {
-            // Debug: log del comando recibido
-            OutputDebugStringA(("Procesando comando: " + command + "\n").c_str());
+        struct CommandData {
+            std::string variable_name;
+            std::string event_type;
+            std::string qualifier;
+            double value;
+            bool is_event_command;
             
-            // Buscar JSON válido
+            CommandData() : value(0.0), is_event_command(false) {}
+        };
+        
+        CommandData ExtractCommandData(const std::string& command) {
+            CommandData cmd_data;
+            
+            // Find JSON boundaries
             size_t start = command.find('{');
             size_t end = command.rfind('}');
             
             if (start == std::string::npos || end == std::string::npos) {
-                OutputDebugStringA("Error: No se encontró JSON válido\n");
-                return empty_msg;
+                return cmd_data; // Invalid JSON
             }
             
             std::string json_str = command.substr(start, end - start + 1);
-            OutputDebugStringA(("JSON extraído: " + json_str + "\n").c_str());
             
-            // Parse manual más robusto
+            // Extract variable name
             size_t var_pos = json_str.find("\"variable\"");
+            if (var_pos != std::string::npos) {
+                size_t var_start = json_str.find(":", var_pos) + 1;
+                var_start = json_str.find("\"", var_start) + 1;
+                size_t var_end = json_str.find("\"", var_start);
+                cmd_data.variable_name = json_str.substr(var_start, var_end - var_start);
+            }
+            
+            // Extract value
             size_t val_pos = json_str.find("\"value\"");
-            
-            if (var_pos == std::string::npos || val_pos == std::string::npos) {
-                OutputDebugStringA("Error: No se encontraron campos variable/value\n");
-                return empty_msg;
+            if (val_pos != std::string::npos) {
+                size_t val_start = json_str.find(":", val_pos) + 1;
+                while (val_start < json_str.length() && 
+                       (json_str[val_start] == ' ' || json_str[val_start] == '\t')) {
+                    val_start++;
+                }
+                size_t val_end = json_str.find_first_of(",}", val_start);
+                std::string val_str = json_str.substr(val_start, val_end - val_start);
+                cmd_data.value = std::stod(val_str);
             }
             
-            // Extraer variable name
-            size_t var_start = json_str.find(":", var_pos) + 1;
-            var_start = json_str.find("\"", var_start) + 1;
-            size_t var_end = json_str.find("\"", var_start);
-            std::string var_name = json_str.substr(var_start, var_end - var_start);
+            // Extract event type (optional)
+            size_t event_pos = json_str.find("\"event\"");
+            if (event_pos != std::string::npos) {
+                size_t event_start = json_str.find(":", event_pos) + 1;
+                event_start = json_str.find("\"", event_start) + 1;
+                size_t event_end = json_str.find("\"", event_start);
+                cmd_data.event_type = json_str.substr(event_start, event_end - event_start);
+                cmd_data.is_event_command = true;
+            }
             
-            // Extraer value
-            size_t val_start = json_str.find(":", val_pos) + 1;
-            while (val_start < json_str.length() && (json_str[val_start] == ' ' || json_str[val_start] == '\t')) {
-                val_start++;
+            // Extract qualifier (optional)
+            size_t qual_pos = json_str.find("\"qualifier\"");
+            if (qual_pos != std::string::npos) {
+                size_t qual_start = json_str.find(":", qual_pos) + 1;
+                qual_start = json_str.find("\"", qual_start) + 1;
+                size_t qual_end = json_str.find("\"", qual_start);
+                cmd_data.qualifier = json_str.substr(qual_start, qual_end - qual_start);
+                
+                // If we have a qualifier, this is an event command
+                cmd_data.is_event_command = true;
             }
-            size_t val_end = json_str.find_first_of(",}", val_start);
-            std::string val_str = json_str.substr(val_start, val_end - val_start);
-            double value = std::stod(val_str);
             
-            OutputDebugStringA(("Variable: " + var_name + ", Valor: " + std::to_string(value) + "\n").c_str());
-            
-            // Crear mensaje apropiado
-            if (var_name == "Controls.Throttle") {
-                MessageControlsThrottle.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Throttle\n");
-                return MessageControlsThrottle;
-            }
-            else if (var_name == "Controls.Flaps") {
-                MessageControlsFlaps.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Flaps\n");
-                return MessageControlsFlaps;
-            }
-            else if (var_name == "Controls.Gear") {
-                MessageControlsGear.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Gear\n");
-                return MessageControlsGear;
-            }
-            else if (var_name == "Controls.Pitch.Input") {
-                MessageControlsPitchInput.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Pitch.Input\n");
-                return MessageControlsPitchInput;
-            }
-            else if (var_name == "Controls.Roll.Input") {
-                MessageControlsRollInput.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Roll.Input\n");
-                return MessageControlsRollInput;
-            }
-            else if (var_name == "Controls.Yaw.Input") {
-                MessageControlsYawInput.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Yaw.Input\n");
-                return MessageControlsYawInput;
-            }
-            else if (var_name == "Communication.COM1Frequency") {
-                MessageNavigationCOM1Frequency.SetValue(value);
-                OutputDebugStringA("Creando mensaje COM1Frequency\n");
-                return MessageNavigationCOM1Frequency;
-            }
-            else if (var_name == "Communication.COM1StandbyFrequency") {
-                MessageNavigationCOM1StandbyFrequency.SetValue(value);
-                OutputDebugStringA("Creando mensaje COM1StandbyFrequency\n");
-                return MessageNavigationCOM1StandbyFrequency;
-            }
-            else if (var_name == "Navigation.NAV1Frequency") {
-                MessageNavigationNAV1Frequency.SetValue(value);
-                OutputDebugStringA("Creando mensaje NAV1Frequency\n");
-                return MessageNavigationNAV1Frequency;
-            }
-            else if (var_name == "Navigation.SelectedCourse1") {
-                MessageNavigationSelectedCourse1.SetValue(value);
-                OutputDebugStringA("Creando mensaje SelectedCourse1\n");
-                return MessageNavigationSelectedCourse1;
-            }
-            else if (var_name == "Autopilot.SelectedAirspeed") {
-                MessageAutopilotSelectedAirspeed.SetValue(value);
-                OutputDebugStringA("Creando mensaje AP.SelectedAirspeed\n");
-                return MessageAutopilotSelectedAirspeed;
-            }
-            else if (var_name == "Autopilot.SelectedHeading") {
-                MessageAutopilotSelectedHeading.SetValue(value);
-                OutputDebugStringA("Creando mensaje AP.SelectedHeading\n");
-                return MessageAutopilotSelectedHeading;
-            }
-            else if (var_name == "Autopilot.SelectedAltitude") {
-                MessageAutopilotSelectedAltitude.SetValue(value);
-                OutputDebugStringA("Creando mensaje AP.SelectedAltitude\n");
-                return MessageAutopilotSelectedAltitude;
-            }
-            // === THROTTLE CONTROLS ===
-            else if (var_name == "Controls.Throttle1") {
-                MessageControlsThrottle1.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Throttle1\n");
-                return MessageControlsThrottle1;
-            }
-            else if (var_name == "Controls.Throttle2") {
-                MessageControlsThrottle2.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Throttle2\n");
-                return MessageControlsThrottle2;
-            }
-            else if (var_name == "Controls.Throttle3") {
-                MessageControlsThrottle3.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Throttle3\n");
-                return MessageControlsThrottle3;
-            }
-            else if (var_name == "Controls.Throttle4") {
-                MessageControlsThrottle4.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Throttle4\n");
-                return MessageControlsThrottle4;
-            }
-            // === MIXTURE CONTROLS ===
-            else if (var_name == "Controls.Mixture") {
-                MessageControlsMixture.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Mixture\n");
-                return MessageControlsMixture;
-            }
-            else if (var_name == "Controls.Mixture1") {
-                MessageControlsMixture1.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Mixture1\n");
-                return MessageControlsMixture1;
-            }
-            else if (var_name == "Controls.Mixture2") {
-                MessageControlsMixture2.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Mixture2\n");
-                return MessageControlsMixture2;
-            }
-            else if (var_name == "Controls.Mixture3") {
-                MessageControlsMixture3.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Mixture3\n");
-                return MessageControlsMixture3;
-            }
-            else if (var_name == "Controls.Mixture4") {
-                MessageControlsMixture4.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Mixture4\n");
-                return MessageControlsMixture4;
-            }
-            // === THRUST REVERSE CONTROLS ===
-            else if (var_name == "Controls.ThrustReverse") {
-                MessageControlsThrustReverse.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.ThrustReverse\n");
-                return MessageControlsThrustReverse;
-            }
-            else if (var_name == "Controls.ThrustReverse1") {
-                MessageControlsThrustReverse1.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.ThrustReverse1\n");
-                return MessageControlsThrustReverse1;
-            }
-            else if (var_name == "Controls.ThrustReverse2") {
-                MessageControlsThrustReverse2.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.ThrustReverse2\n");
-                return MessageControlsThrustReverse2;
-            }
-            else if (var_name == "Controls.ThrustReverse3") {
-                MessageControlsThrustReverse3.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.ThrustReverse3\n");
-                return MessageControlsThrustReverse3;
-            }
-            else if (var_name == "Controls.ThrustReverse4") {
-                MessageControlsThrustReverse4.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.ThrustReverse4\n");
-                return MessageControlsThrustReverse4;
-            }
-            // === AIR BRAKE CONTROL ===
-            else if (var_name == "Controls.AirBrake") {
-                MessageControlsAirBrake.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.AirBrake\n");
-                return MessageControlsAirBrake;
-            }
-            // === ADDITIONAL NAVIGATION ===
-            else if (var_name == "Communication.COM2Frequency") {
-                MessageNavigationCOM2Frequency.SetValue(value);
-                OutputDebugStringA("Creando mensaje COM2Frequency\n");
-                return MessageNavigationCOM2Frequency;
-            }
-            else if (var_name == "Communication.COM2StandbyFrequency") {
-                MessageNavigationCOM2StandbyFrequency.SetValue(value);
-                OutputDebugStringA("Creando mensaje COM2StandbyFrequency\n");
-                return MessageNavigationCOM2StandbyFrequency;
-            }
-            else if (var_name == "Navigation.NAV1StandbyFrequency") {
-                MessageNavigationNAV1StandbyFrequency.SetValue(value);
-                OutputDebugStringA("Creando mensaje NAV1StandbyFrequency\n");
-                return MessageNavigationNAV1StandbyFrequency;
-            }
-            else if (var_name == "Navigation.NAV2Frequency") {
-                MessageNavigationNAV2Frequency.SetValue(value);
-                OutputDebugStringA("Creando mensaje NAV2Frequency\n");
-                return MessageNavigationNAV2Frequency;
-            }
-            else if (var_name == "Navigation.NAV2StandbyFrequency") {
-                MessageNavigationNAV2StandbyFrequency.SetValue(value);
-                OutputDebugStringA("Creando mensaje NAV2StandbyFrequency\n");
-                return MessageNavigationNAV2StandbyFrequency;
-            }
-            else if (var_name == "Navigation.SelectedCourse2") {
-                MessageNavigationSelectedCourse2.SetValue(value);
-                OutputDebugStringA("Creando mensaje SelectedCourse2\n");
-                return MessageNavigationSelectedCourse2;
-            }
-            // === TRANSPONDER ===
-            else if (var_name == "Communication.TransponderCode") {
-                MessageTransponderCode.SetValue(value);
-                OutputDebugStringA("Creando mensaje TransponderCode\n");
-                return MessageTransponderCode;
-            }
-            // === AUTOPILOT VERTICAL SPEED ===
-            else if (var_name == "Autopilot.SelectedVerticalSpeed") {
-                MessageAutopilotSelectedVerticalSpeed.SetValue(value);
-                OutputDebugStringA("Creando mensaje AP.SelectedVerticalSpeed\n");
-                return MessageAutopilotSelectedVerticalSpeed;
-            }
-            else if (var_name == "Autopilot.Heading") {
-                MessageAutopilotHeading.SetValue(value);
-                OutputDebugStringA("Creando mensaje Autopilot.Heading\n");
-                return MessageAutopilotHeading;
-            }
-            else if (var_name == "Autopilot.VerticalSpeed") {
-                MessageAutopilotVerticalSpeed.SetValue(value);
-                OutputDebugStringA("Creando mensaje Autopilot.VerticalSpeed\n");
-                return MessageAutopilotVerticalSpeed;
-            }
-            else if (var_name == "Autopilot.Master") {
-                MessageAutopilotMaster.SetValue(value);
-                OutputDebugStringA("Creando mensaje Autopilot.Master\n");
-                return MessageAutopilotMaster;
-            }
-            else if (var_name == "Autopilot.SelectedSpeed") {
-                MessageAutopilotSelectedSpeed.SetValue(value);
-                OutputDebugStringA("Creando mensaje Autopilot.SelectedSpeed\n");
-                return MessageAutopilotSelectedSpeed;
-            }
-            // === AIRCRAFT SYSTEM COMMANDS ===
-            else if (var_name == "Aircraft.ParkingBrake") {
-                MessageAircraftParkingBrake.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.ParkingBrake\n");
-                return MessageAircraftParkingBrake;
-            }
-            else if (var_name == "Aircraft.Starter1") {
-                MessageAircraftStarter1.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.Starter1\n");
-                return MessageAircraftStarter1;
-            }
-            else if (var_name == "Aircraft.Starter2") {
-                MessageAircraftStarter2.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.Starter2\n");
-                return MessageAircraftStarter2;
-            }
-            else if (var_name == "Aircraft.Starter3") {
-                MessageAircraftStarter3.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.Starter3\n");
-                return MessageAircraftStarter3;
-            }
-            else if (var_name == "Aircraft.Starter4") {
-                MessageAircraftStarter4.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.Starter4\n");
-                return MessageAircraftStarter4;
-            }
-            else if (var_name == "Aircraft.Ignition1") {
-                MessageAircraftIgnition1.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.Ignition1\n");
-                return MessageAircraftIgnition1;
-            }
-            else if (var_name == "Aircraft.Ignition2") {
-                MessageAircraftIgnition2.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.Ignition2\n");
-                return MessageAircraftIgnition2;
-            }
-            else if (var_name == "Aircraft.Ignition3") {
-                MessageAircraftIgnition3.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.Ignition3\n");
-                return MessageAircraftIgnition3;
-            }
-            else if (var_name == "Aircraft.Ignition4") {
-                MessageAircraftIgnition4.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.Ignition4\n");
-                return MessageAircraftIgnition4;
-            }
-            else if (var_name == "Aircraft.EngineMaster1") {
-                MessageAircraftEngineMaster1.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.EngineMaster1\n");
-                return MessageAircraftEngineMaster1;
-            }
-            else if (var_name == "Aircraft.EngineMaster2") {
-                MessageAircraftEngineMaster2.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.EngineMaster2\n");
-                return MessageAircraftEngineMaster2;
-            }
-            else if (var_name == "Aircraft.EngineMaster3") {
-                MessageAircraftEngineMaster3.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.EngineMaster3\n");
-                return MessageAircraftEngineMaster3;
-            }
-            else if (var_name == "Aircraft.EngineMaster4") {
-                MessageAircraftEngineMaster4.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.EngineMaster4\n");
-                return MessageAircraftEngineMaster4;
-            }
-            else if (var_name == "Aircraft.AutoBrakeSetting") {
-                MessageAircraftAutoBrakeSetting.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.AutoBrakeSetting\n");
-                return MessageAircraftAutoBrakeSetting;
-            }
-            // === WHEEL BRAKE COMMANDS ===
-            else if (var_name == "Controls.WheelBrake.Left") {
-                MessageControlsWheelBrakeLeft.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.WheelBrake.Left\n");
-                return MessageControlsWheelBrakeLeft;
-            }
-            else if (var_name == "Controls.WheelBrake.Right") {
-                MessageControlsWheelBrakeRight.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.WheelBrake.Right\n");
-                return MessageControlsWheelBrakeRight;
-            }
-            // === PROPELLER SPEED COMMANDS ===
-            else if (var_name == "Controls.PropellerSpeed1") {
-                MessageControlsPropellerSpeed1.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.PropellerSpeed1\n");
-                return MessageControlsPropellerSpeed1;
-            }
-            else if (var_name == "Controls.PropellerSpeed2") {
-                MessageControlsPropellerSpeed2.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.PropellerSpeed2\n");
-                return MessageControlsPropellerSpeed2;
-            }
-            else if (var_name == "Controls.PropellerSpeed3") {
-                MessageControlsPropellerSpeed3.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.PropellerSpeed3\n");
-                return MessageControlsPropellerSpeed3;
-            }
-            else if (var_name == "Controls.PropellerSpeed4") {
-                MessageControlsPropellerSpeed4.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.PropellerSpeed4\n");
-                return MessageControlsPropellerSpeed4;
-            }
-            // === AIR BRAKE COMMANDS ===
-            else if (var_name == "Controls.AirBrake.Arm") {
-                MessageControlsAirBrakeArm.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.AirBrake.Arm\n");
-                return MessageControlsAirBrakeArm;
-            }
-            else if (var_name == "Controls.GliderAirBrake") {
-                MessageControlsGliderAirBrake.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.GliderAirBrake\n");
-                return MessageControlsGliderAirBrake;
-            }
-            // === HELICOPTER COMMANDS ===
-            else if (var_name == "Controls.Collective") {
-                MessageControlsCollective.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.Collective\n");
-                return MessageControlsCollective;
-            }
-            else if (var_name == "Controls.TailRotor") {
-                MessageControlsTailRotor.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.TailRotor\n");
-                return MessageControlsTailRotor;
-            }
-            else if (var_name == "Controls.CyclicPitch") {
-                MessageControlsCyclicPitch.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.CyclicPitch\n");
-                return MessageControlsCyclicPitch;
-            }
-            else if (var_name == "Controls.CyclicRoll") {
-                MessageControlsCyclicRoll.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.CyclicRoll\n");
-                return MessageControlsCyclicRoll;
-            }
-            else if (var_name == "Controls.RotorBrake") {
-                MessageControlsRotorBrake.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.RotorBrake\n");
-                return MessageControlsRotorBrake;
-            }
-            else if (var_name == "Controls.HelicopterThrottle1") {
-                MessageControlsHelicopterThrottle1.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.HelicopterThrottle1\n");
-                return MessageControlsHelicopterThrottle1;
-            }
-            else if (var_name == "Controls.HelicopterThrottle2") {
-                MessageControlsHelicopterThrottle2.SetValue(value);
-                OutputDebugStringA("Creando mensaje Controls.HelicopterThrottle2\n");
-                return MessageControlsHelicopterThrottle2;
-            }
-            // === MISSING AIRCRAFT COMMANDS ===
-            else if (var_name == "Aircraft.Gear") {
-                MessageAircraftGear.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.Gear\n");
-                return MessageAircraftGear;
-            }
-            else if (var_name == "Aircraft.EngineThrottle1") {
-                MessageAircraftEngineThrottle1.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.EngineThrottle1\n");
-                return MessageAircraftEngineThrottle1;
-            }
-            else if (var_name == "Aircraft.EngineThrottle2") {
-                MessageAircraftEngineThrottle2.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.EngineThrottle2\n");
-                return MessageAircraftEngineThrottle2;
-            }
-            else if (var_name == "Aircraft.EngineThrottle3") {
-                MessageAircraftEngineThrottle3.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.EngineThrottle3\n");
-                return MessageAircraftEngineThrottle3;
-            }
-            else if (var_name == "Aircraft.EngineThrottle4") {
-                MessageAircraftEngineThrottle4.SetValue(value);
-                OutputDebugStringA("Creando mensaje Aircraft.EngineThrottle4\n");
-                return MessageAircraftEngineThrottle4;
-            }
-            // === MISSING PERFORMANCE COMMANDS ===
-            else if (var_name == "Performance.Speed.VS0") {
-                MessagePerformanceSpeedVS0.SetValue(value);
-                OutputDebugStringA("Creando mensaje Performance.Speed.VS0\n");
-                return MessagePerformanceSpeedVS0;
-            }
-            else if (var_name == "Performance.Speed.VS1") {
-                MessagePerformanceSpeedVS1.SetValue(value);
-                OutputDebugStringA("Creando mensaje Performance.Speed.VS1\n");
-                return MessagePerformanceSpeedVS1;
-            }
-            else if (var_name == "Performance.Speed.VFE") {
-                MessagePerformanceSpeedVFE.SetValue(value);
-                OutputDebugStringA("Creando mensaje Performance.Speed.VFE\n");
-                return MessagePerformanceSpeedVFE;
-            }
-            else if (var_name == "Performance.Speed.VNO") {
-                MessagePerformanceSpeedVNO.SetValue(value);
-                OutputDebugStringA("Creando mensaje Performance.Speed.VNO\n");
-                return MessagePerformanceSpeedVNO;
-            }
-            else if (var_name == "Performance.Speed.VNE") {
-                MessagePerformanceSpeedVNE.SetValue(value);
-                OutputDebugStringA("Creando mensaje Performance.Speed.VNE\n");
-                return MessagePerformanceSpeedVNE;
-            }
-            // === MISSING WARNING COMMANDS ===
-            else if (var_name == "Warnings.MasterWarning") {
-                MessageWarningsMasterWarning.SetValue(value);
-                OutputDebugStringA("Creando mensaje Warnings.MasterWarning\n");
-                return MessageWarningsMasterWarning;
-            }
-            else if (var_name == "Warnings.MasterCaution") {
-                MessageWarningsMasterCaution.SetValue(value);
-                OutputDebugStringA("Creando mensaje Warnings.MasterCaution\n");
-                return MessageWarningsMasterCaution;
-            }
-            else if (var_name == "Warnings.LowOilPressure") {
-                MessageWarningsLowOilPressure.SetValue(value);
-                OutputDebugStringA("Creando mensaje Warnings.LowOilPressure\n");
-                return MessageWarningsLowOilPressure;
-            }
-            else if (var_name == "Warnings.LowFuelPressure") {
-                MessageWarningsLowFuelPressure.SetValue(value);
-                OutputDebugStringA("Creando mensaje Warnings.LowFuelPressure\n");
-                return MessageWarningsLowFuelPressure;
-            }
-            // NOTE: Aircraft.EngineMaster1-4, Aircraft.Starter1-4, Aircraft.Ignition1-4 
-            // are already defined above in the AIRCRAFT SYSTEM COMMANDS section
-            else {
-                OutputDebugStringA(("Variable no soportada: " + var_name + "\n").c_str());
-            }
-        }
-        catch (const std::exception& e) {
-            OutputDebugStringA(("Excepción parseando comando: " + std::string(e.what()) + "\n").c_str());
-        }
-        catch (...) {
-            OutputDebugStringA("Excepción desconocida parseando comando\n");
+            return cmd_data;
         }
         
-        return empty_msg;
-    }
-};
+        tm_external_message TryProcessCoreVariable(const CommandData& cmd_data) {
+            tm_external_message empty_msg;
+            
+            // Process all existing core variables with enhanced event support
+            const std::string& var_name = cmd_data.variable_name;
+            
+            // Controls - Enhanced with event support
+            if (var_name == "Controls.Throttle") {
+                return ProcessCoreMessage(MessageControlsThrottle, cmd_data);
+            }
+            else if (var_name == "Controls.Flaps") {
+                return ProcessCoreMessage(MessageControlsFlaps, cmd_data);
+            }
+            else if (var_name == "Controls.Gear") {
+                return ProcessCoreMessage(MessageControlsGear, cmd_data);
+            }
+            else if (var_name == "Controls.Pitch.Input") {
+                return ProcessCoreMessage(MessageControlsPitchInput, cmd_data);
+            }
+            else if (var_name == "Controls.Roll.Input") {
+                return ProcessCoreMessage(MessageControlsRollInput, cmd_data);
+            }
+            else if (var_name == "Controls.Yaw.Input") {
+                return ProcessCoreMessage(MessageControlsYawInput, cmd_data);
+            }
+            
+            // Engine controls
+            else if (var_name == "Controls.Throttle1") {
+                return ProcessCoreMessage(MessageControlsThrottle1, cmd_data);
+            }
+            else if (var_name == "Controls.Throttle2") {
+                return ProcessCoreMessage(MessageControlsThrottle2, cmd_data);
+            }
+            else if (var_name == "Controls.Throttle3") {
+                return ProcessCoreMessage(MessageControlsThrottle3, cmd_data);
+            }
+            else if (var_name == "Controls.Throttle4") {
+                return ProcessCoreMessage(MessageControlsThrottle4, cmd_data);
+            }
+            
+            // Brakes
+            else if (var_name == "Controls.WheelBrake.Left") {
+                return ProcessCoreMessage(MessageControlsWheelBrakeLeft, cmd_data);
+            }
+            else if (var_name == "Controls.WheelBrake.Right") {
+                return ProcessCoreMessage(MessageControlsWheelBrakeRight, cmd_data);
+            }
+            else if (var_name == "Controls.AirBrake") {
+                return ProcessCoreMessage(MessageControlsAirBrake, cmd_data);
+            }
+            
+            // Navigation
+            else if (var_name == "Communication.COM1Frequency") {
+                return ProcessCoreMessage(MessageNavigationCOM1Frequency, cmd_data);
+            }
+            else if (var_name == "Navigation.NAV1Frequency") {
+                return ProcessCoreMessage(MessageNavigationNAV1Frequency, cmd_data);
+            }
+            else if (var_name == "Navigation.SelectedCourse1") {
+                return ProcessCoreMessage(MessageNavigationSelectedCourse1, cmd_data);
+            }
+            
+            // Autopilot
+            else if (var_name == "Autopilot.SelectedAirspeed") {
+                return ProcessCoreMessage(MessageAutopilotSelectedAirspeed, cmd_data);
+            }
+            else if (var_name == "Autopilot.SelectedHeading") {
+                return ProcessCoreMessage(MessageAutopilotSelectedHeading, cmd_data);
+            }
+            else if (var_name == "Autopilot.SelectedAltitude") {
+                return ProcessCoreMessage(MessageAutopilotSelectedAltitude, cmd_data);
+            }
+            
+            // Add more core variables as needed...
+            
+            return empty_msg; // Not found in core
+        }
+        
+        tm_external_message ProcessCoreMessage(tm_external_message& core_message, 
+                                              const CommandData& cmd_data) {
+            try {
+                if (cmd_data.is_event_command) {
+                    // Handle event-based commands
+                    if (cmd_data.event_type == "OnStep" || cmd_data.qualifier == "step") {
+                        core_message.SetValue(cmd_data.value);
+                        HybridLogToFile("Core step event: " + cmd_data.variable_name + 
+                                       " = " + std::to_string(cmd_data.value));
+                    }
+                    else if (cmd_data.event_type == "OnToggle" || cmd_data.qualifier == "toggle") {
+                        core_message.SetValue(1.0); // Trigger value
+                        HybridLogToFile("Core toggle event: " + cmd_data.variable_name);
+                    }
+                    else if (cmd_data.qualifier == "offset") {
+                        core_message.SetValue(cmd_data.value);
+                        HybridLogToFile("Core offset event: " + cmd_data.variable_name + 
+                                       " offset=" + std::to_string(cmd_data.value));
+                    }
+                    else {
+                        core_message.SetValue(cmd_data.value);
+                        HybridLogToFile("Core default event: " + cmd_data.variable_name + 
+                                       " = " + std::to_string(cmd_data.value));
+                    }
+                } else {
+                    // Standard value command
+                    core_message.SetValue(cmd_data.value);
+                    HybridLogToFile("Core value: " + cmd_data.variable_name + 
+                                   " = " + std::to_string(cmd_data.value));
+                }
+                
+                return core_message;
+                
+            } catch (const std::exception& e) {
+                HybridLogToFile("ERROR processing core message: " + std::string(e.what()));
+                tm_external_message empty_msg;
+                return empty_msg;
+            }
+        }
+        
+        tm_external_message TryProcessHybridVariable(const CommandData& cmd_data) {
+            tm_external_message empty_msg;
+            
+            try {
+                tm_external_message* hybrid_msg = hybrid_manager->GetMessage(cmd_data.variable_name);
+                if (!hybrid_msg) {
+                    HybridLogToFile("Hybrid variable not found: " + cmd_data.variable_name);
+                    return empty_msg;
+                }
+                
+                // Get variable info for enhanced processing
+                auto var_details = hybrid_manager->GetVariableDetails(cmd_data.variable_name);
+                const EnhancedVariableInfo* var_info = hybrid_manager->FindVariableInfo(cmd_data.variable_name);
+                
+                if (cmd_data.is_event_command && var_info) {
+                    // Process enhanced event command
+                    return ProcessHybridEvent(*hybrid_msg, cmd_data, *var_info);
+                } else {
+                    // Process simple value command
+                    hybrid_msg->SetValue(cmd_data.value);
+                    HybridLogToFile("Hybrid value: " + cmd_data.variable_name + 
+                                   " = " + std::to_string(cmd_data.value));
+                    return *hybrid_msg;
+                }
+                
+            } catch (const std::exception& e) {
+                HybridLogToFile("ERROR processing hybrid variable: " + std::string(e.what()));
+                return empty_msg;
+            }
+        }
+        
+        tm_external_message ProcessHybridEvent(tm_external_message& hybrid_msg,
+                                              const CommandData& cmd_data,
+                                              const EnhancedVariableInfo& var_info) {
+            
+            HybridLogToFile("Processing hybrid event: " + cmd_data.variable_name + 
+                           " event=" + cmd_data.event_type + " qualifier=" + cmd_data.qualifier);
+            
+            // Validate qualifier
+            if (!cmd_data.qualifier.empty() && !var_info.HasQualifier(cmd_data.qualifier)) {
+                HybridLogToFile("WARNING: Invalid qualifier '" + cmd_data.qualifier + 
+                               "' for variable " + cmd_data.variable_name);
+                // Continue anyway, might still work
+            }
+            
+            try {
+                if (cmd_data.qualifier == "step" && var_info.is_step) {
+                    hybrid_msg.SetValue(cmd_data.value);
+                    HybridLogToFile("Hybrid step: " + cmd_data.variable_name + 
+                                   " step=" + std::to_string(cmd_data.value));
+                }
+                else if (cmd_data.qualifier == "toggle" && var_info.is_toggle) {
+                    hybrid_msg.SetValue(1.0); // Trigger toggle
+                    HybridLogToFile("Hybrid toggle: " + cmd_data.variable_name);
+                }
+                else if (cmd_data.qualifier == "move" && var_info.is_move) {
+                    hybrid_msg.SetValue(cmd_data.value);
+                    HybridLogToFile("Hybrid move: " + cmd_data.variable_name + 
+                                   " rate=" + std::to_string(cmd_data.value));
+                }
+                else if (cmd_data.qualifier == "offset" && var_info.is_offset) {
+                    hybrid_msg.SetValue(cmd_data.value);
+                    HybridLogToFile("Hybrid offset: " + cmd_data.variable_name + 
+                                   " offset=" + std::to_string(cmd_data.value));
+                }
+                else if (cmd_data.qualifier == "active" && var_info.is_active) {
+                    hybrid_msg.SetValue(cmd_data.value);
+                    HybridLogToFile("Hybrid active: " + cmd_data.variable_name + 
+                                   " active=" + std::to_string(cmd_data.value));
+                }
+                else {
+                    // Default: standard value setting
+                    hybrid_msg.SetValue(cmd_data.value);
+                    HybridLogToFile("Hybrid default: " + cmd_data.variable_name + 
+                                   " = " + std::to_string(cmd_data.value));
+                }
+                
+                return hybrid_msg;
+                
+            } catch (const std::exception& e) {
+                HybridLogToFile("ERROR in hybrid event processing: " + std::string(e.what()));
+                tm_external_message empty_msg;
+                return empty_msg;
+            }
+        }
+        
+        void UpdateCommandStats(const std::string& command) {
+            try {
+                std::lock_guard<std::mutex> lock(stats_mutex);
+                
+                // Extract variable name for stats
+                size_t var_pos = command.find("\"variable\"");
+                if (var_pos != std::string::npos) {
+                    size_t var_start = command.find(":", var_pos);
+                    size_t var_name_start = command.find("\"", var_start) + 1;
+                    size_t var_name_end = command.find("\"", var_name_start);
+                    
+                    if (var_name_end != std::string::npos) {
+                        std::string var_name = command.substr(var_name_start, 
+                                                             var_name_end - var_name_start);
+                        command_stats[var_name]++;
+                    }
+                }
+            } catch (...) {
+                // Ignore stats errors
+            }
+        }
+    };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // MAIN BRIDGE CONTROLLER
@@ -2679,7 +3576,8 @@ class AeroflyBridge {
 private:
     SharedMemoryInterface shared_memory;
     TCPServerInterface tcp_server;
-    CommandProcessor command_processor;
+    EnhancedCommandProcessor command_processor;
+    HybridVariableManager hybrid_manager;  // ✅ AGREGADO: Sistema híbrido
     bool initialized;
     
 public:
@@ -2689,6 +3587,19 @@ public:
         // Initialize shared memory (primary interface)
         if (!shared_memory.Initialize()) {
             return false;
+        }
+        
+        // ✅ NUEVO: Initialize hybrid variable manager
+        OutputDebugStringA("=== INITIALIZING HYBRID SYSTEM ===\n");
+        if (!hybrid_manager.Initialize(shared_memory.GetData())) {
+            OutputDebugStringA("ERROR: Failed to initialize hybrid system\n");
+            // Don't fail completely, core variables still work
+        } else {
+            OutputDebugStringA("SUCCESS: Hybrid system initialized\n");
+            
+            // ✅ NUEVO: Connect hybrid system to command processor
+            command_processor.SetHybridManager(&hybrid_manager);
+            OutputDebugStringA("SUCCESS: Hybrid system connected to CommandProcessor\n");
         }
         
         // Start TCP server (optional, for network access)
