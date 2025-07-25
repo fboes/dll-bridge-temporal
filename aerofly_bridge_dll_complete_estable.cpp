@@ -16,6 +16,10 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winsock2.h>
+#include <shlobj.h>  // Para SHGetFolderPath
+
+#pragma comment(lib, "shell32.lib")
+
 #include <ws2tcpip.h>
 #include <thread>
 #include <vector>
@@ -42,23 +46,114 @@
 #include <ctime>
 #include <algorithm>
 
+std::string GetSmartLogPath() {
+    static std::string cached_path;
+    
+    if (!cached_path.empty()) {
+        return cached_path;
+    }
+    
+    // Priority order for log file location:
+    std::vector<std::string> candidate_paths;
+    
+    // 1. User's Documents folder (most user-friendly)
+    char documents[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_MYDOCUMENTS, NULL, SHGFP_TYPE_CURRENT, documents))) {
+        candidate_paths.push_back(std::string(documents) + "\\AeroflyBridge\\debug.log");
+    }
+    
+    // 2. Aerofly FS4 documents folder (if exists)
+    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_MYDOCUMENTS, NULL, SHGFP_TYPE_CURRENT, documents))) {
+        std::string aerofly_docs = std::string(documents) + "\\Aerofly FS 4";
+        if (GetFileAttributesA(aerofly_docs.c_str()) != INVALID_FILE_ATTRIBUTES) {
+            candidate_paths.push_back(aerofly_docs + "\\aerofly_bridge_debug.log");
+        }
+    }
+    
+    // 3. AppData/Local (for portable/restricted environments)
+    char* appdata = nullptr;
+    size_t len = 0;
+    if (_dupenv_s(&appdata, &len, "LOCALAPPDATA") == 0 && appdata != nullptr) {
+        candidate_paths.push_back(std::string(appdata) + "\\AeroflyBridge\\debug.log");
+        free(appdata);
+    }
+    
+    // 4. Temp directory
+    char temp_path[MAX_PATH];
+    if (GetTempPathA(MAX_PATH, temp_path) > 0) {
+        candidate_paths.push_back(std::string(temp_path) + "aerofly_bridge_debug.log");
+    }
+    
+    // 5. Current directory (last resort)
+    candidate_paths.push_back(".\\aerofly_bridge_debug.log");
+    
+    // Try each path and use the first one that works
+    for (const auto& path : candidate_paths) {
+        try {
+            // Create directory if needed
+            size_t last_slash = path.find_last_of("\\");
+            if (last_slash != std::string::npos) {
+                std::string dir_path = path.substr(0, last_slash);
+                CreateDirectoryA(dir_path.c_str(), NULL); // Ignore if already exists
+            }
+            
+            // Test if we can write to this location
+            std::ofstream test_file(path, std::ios::app);
+            if (test_file.is_open()) {
+                test_file.close();
+                cached_path = path;
+                return cached_path;
+            }
+        } catch (...) {
+            // Try next path
+            continue;
+        }
+    }
+    
+    // If all else fails, use current directory
+    cached_path = ".\\aerofly_bridge_debug.log";
+    return cached_path;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // GLOBAL LOGGING FUNCTION - For debugging hybrid system
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void HybridLogToFile(const std::string& message) {
     try {
-        std::ofstream log_file("C:\\Users\\Admin\\Documents\\hybrid_debug.log", std::ios::app);
+        std::string log_path = GetSmartLogPath();
+        std::ofstream log_file(log_path, std::ios::app);
+        
         if (log_file.is_open()) {
             auto now = std::chrono::system_clock::now();
             auto time_t = std::chrono::system_clock::to_time_t(now);
+            
+            // Enhanced timestamp with date
             char timestamp[100];
-            strftime(timestamp, sizeof(timestamp), "%H:%M:%S", localtime(&time_t));
+            strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", localtime(&time_t));
+            
+            // Log session start with path info
+            static bool session_started = false;
+            if (!session_started) {
+                log_file << "\n=== AEROFLY BRIDGE SESSION START ===" << std::endl;
+                log_file << "[" << timestamp << "] LOG_PATH: " << log_path << std::endl;
+                log_file << "[" << timestamp << "] VERSION: Aerofly FS4 Bridge v2.0" << std::endl;
+                session_started = true;
+            }
+            
             log_file << "[" << timestamp << "] " << message << std::endl;
             log_file.close();
+        } else {
+            // Fallback to debug output
+            OutputDebugStringA(("AEROFLY_BRIDGE: " + message + "\n").c_str());
         }
     } catch (...) {
-        // Ignore file errors - don't crash because of logging
+        // Last resort debug output
+        try {
+            OutputDebugStringA(("AEROFLY_BRIDGE_ERROR: " + message + "\n").c_str());
+        } catch (...) {
+            // Complete silence to avoid DLL crashes
+        }
     }
 }
 

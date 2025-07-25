@@ -1,67 +1,67 @@
 @echo off
 echo ========================================
-echo  AEROFLY BRIDGE DLL - COMPILADOR
+echo  AEROFLY BRIDGE DLL - COMPILER
 echo ========================================
 
-REM Buscar Visual Studio 2022
+REM Search for Visual Studio 2022
 set VS_PATH=""
 if exist "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" (
     set VS_PATH="C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-    echo  Visual Studio 2022 Community encontrado
+    echo  Visual Studio 2022 Community found
 ) else if exist "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat" (
     set VS_PATH="C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
-    echo  Visual Studio 2019 Community encontrado
+    echo  Visual Studio 2019 Community found
 ) else (
-    echo  Visual Studio no encontrado
-    echo Instala Visual Studio Community con herramientas C++
+    echo  Visual Studio not found
+    echo Please install Visual Studio Community with C++ tools
     pause
     exit /b 1
 )
 
-REM Verificar archivos fuente
+REM Verify source files
 if not exist "aerofly_bridge_dll_complete_estable.cpp" (
-    echo  Archivo aerofly_bridge_dll_complete_estable.cpp no encontrado
+    echo  File aerofly_bridge_dll_complete_estable.cpp not found
     pause
     exit /b 1
 )
 
 if not exist "tm_external_message.h" (
-    echo  Archivo tm_external_message.h no encontrado
+    echo  File tm_external_message.h not found
     pause
     exit /b 1
 )
 
-echo  Archivos fuente encontrados
+echo  Source files found
 
-REM Configurar entorno de compilación
-echo  Configurando entorno de compilación...
+REM Setup compilation environment
+echo  Setting up compilation environment...
 call %VS_PATH%
 
-REM Compilar la DLL
-echo  Compilando AeroflyBridge.dll...
+REM Compile the DLL
+echo  Compiling AeroflyBridge.dll...
 cl /LD /EHsc /O2 /std:c++17 /DWIN32 /D_WINDOWS /D_USRDLL ^
    aerofly_bridge_dll_complete_estable.cpp ^
    /Fe:AeroflyBridge.dll ^
-   /link ws2_32.lib advapi32.lib
+   /link ws2_32.lib advapi32.lib shell32.lib
 
-REM Verificar resultado
+REM Verify result
 if exist "AeroflyBridge.dll" (
-    echo  ¡Compilación exitosa!
-    echo  DLL creada: AeroflyBridge.dll
+    echo  Compilation successful!
+    echo  DLL created: AeroflyBridge.dll
     
-    REM Limpiar archivos temporales
+    REM Clean temporary files
     del *.obj *.exp *.lib 2>nul
     
     echo.
-    echo  Próximos pasos:
-    echo 1. Copia AeroflyBridge.dll a: %%USERPROFILE%%\Documents\Aerofly FS 4\external_dll\
-    echo 2. Ejecuta Aerofly FS 4
-    echo 3. Inicia un vuelo
-    echo 4. Prueba la conexión con Python
+    echo  Next steps:
+    echo 1. Copy AeroflyBridge.dll to: %%USERPROFILE%%\Documents\Aerofly FS 4\external_dll\
+    echo 2. Start Aerofly FS 4
+    echo 3. Begin a flight
+    echo 4. Test connection with Python
     echo.
 ) else (
-    echo  Error en la compilación
-    echo Revisa los mensajes de error arriba
+    echo  Compilation error
+    echo Check error messages above
 )
 
 pause
